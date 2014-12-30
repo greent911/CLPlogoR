@@ -90,3 +90,5 @@ Temporary Items
 Session.vim
 .netrwhist
 *~
+*.jpg
+*.png
