@@ -5,33 +5,38 @@ import itertools
 import sys
 
 class TrainingHandler():
-    def drawKeyPoints(self, img, template, skp, tkp, num=-1):
-        h1, w1 = img.shape[:2]
-        h2, w2 = template.shape[:2]
+    def __init__(self):
+        # FLANN parameters
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks=50)   # or pass empty dictionary
+
+        self.flann = cv2.FlannBasedMatcher(index_params,search_params)
+        self.DISTCOMPAREFACTOR = 0.7
+        
+    def drawKeyPoints(self, img1, img2, gkp1, gkp2, num=-1):
+        h1, w1 = img1.shape[:2]
+        h2, w2 = img2.shape[:2]
         nWidth = w1+w2
         nHeight = h1+h2
         newimg = np.zeros((nHeight, nWidth, 3), np.uint8)
-        newimg[:h2, :w2] = template
-        newimg[h2:h2+h1, w2:w2+w1] = img
-        # cv2.imshow('test',newimg)
+        newimg[:h2, :w2] = img2
+        newimg[h2:h2+h1, w2:w2+w1] = img1
 
-        maxlen = min(len(skp), len(tkp))
+        maxlen = min(len(gkp1), len(gkp2))
         if num < 0 or num > maxlen:
             num = maxlen
         for i in range(num):
-            pt_a = (int(tkp[i].pt[0]), int(tkp[i].pt[1]))
-            pt_b = (int(skp[i].pt[0]+w2), int(skp[i].pt[1]+h2))
+            pt_a = (int(gkp2[i].pt[0]), int(gkp2[i].pt[1]))
+            pt_b = (int(gkp1[i].pt[0]+w2), int(gkp1[i].pt[1]+h2))
             cv2.line(newimg, pt_a, pt_b, (255, 0, 0))
-        cv2.imshow('test',newimg)
-        # return newimg
+        cv2.imshow('Matches',newimg)
 
     def feature_matching(self, img1path, img2path):
         """Feature Matching
         """
         img1 = cv2.imread(img1path) # queryImage
         img2 = cv2.imread(img2path) # trainImage
-        # cv2.imshow('img1', img1)
-        # cv2.imshow('img2', img2)
 
         # Initiate SIFT detector
         sift = cv2.SIFT()
@@ -40,33 +45,31 @@ class TrainingHandler():
         kp1, des1 = sift.detectAndCompute(img1,None)
         kp2, des2 = sift.detectAndCompute(img2,None)
 
-        # FLANN parameters
-        FLANN_INDEX_KDTREE = 0
-        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-        search_params = dict(checks=50)   # or pass empty dictionary
-
-        flann = cv2.FlannBasedMatcher(index_params,search_params)
-
-        matches = flann.knnMatch(des1,des2,k=2)
+        
+        # Need only good matches
+        matches = self.flann.knnMatch(des1,des2,k=2)
         goodmatches = []
         for i,(m,n) in enumerate(matches):
-            if m.distance < 0.7*n.distance:
+            if m.distance < self.DISTCOMPAREFACTOR*n.distance:
                 goodmatches.append(m)
                 # print i
         # print goodmatches
         # print goodmatches[0].distance
         # print matches[233][0].distance
-
+        
+        # Sort goodmatches by distance
         indices = range(len(goodmatches))
         indices.sort(key=lambda i: goodmatches[i].distance)
-        # for i in indices:
-        #     print goodmatches[i].distance
-        skp = []
+
+        gkp1 = []
         for i in indices:
-            skp.append(kp1[goodmatches[i].queryIdx])
-        # print skp
-        tkp = []
+            gkp1.append(kp1[goodmatches[i].queryIdx])
+        gkp2 = []
         for i in indices:
-            tkp.append(kp2[goodmatches[i].trainIdx])
-        # print tkp
-        self.drawKeyPoints(img1,img2,skp,tkp,50)
+            gkp2.append(kp2[goodmatches[i].trainIdx])
+
+        self.drawKeyPoints(img1,img2,gkp1,gkp2)
+
+if __name__ == '__main__':
+   trHandler = TrainingHandler()
+   trHandler.feature_matching('box.png','box_in_scene.png')
