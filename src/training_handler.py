@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-from math import atan, degrees, exp
+from math import atan, degrees, exp, acos, sqrt
+import itertools
 
 class TrainingHandler():
     def __init__(self):
@@ -11,6 +12,7 @@ class TrainingHandler():
 
         self.flann = cv2.FlannBasedMatcher(index_params,search_params)
         self.DISTCOMPAREFACTOR = 0.7
+        self.SIM_THRESHOLD = 0.95
         
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
@@ -63,7 +65,8 @@ class TrainingHandler():
     def similarity_keypoints(self, keypoints1, keypoints2):
         p1length = len(keypoints1)
 
-        simedge = np.zeros((p1length,p1length),float)
+        e_match = np.zeros((p1length,p1length),float)
+        v_match = set()
         for i in range(p1length-1):
             for j in range(i+1,p1length):
                 ix = keypoints1[i].pt[0]
@@ -87,9 +90,51 @@ class TrainingHandler():
        
                 dalpha = abs(alpha - alphap)
                 dbeta = abs(beta - betap)
-                simedge[i,j] = exp(-dalpha*dalpha/128) * exp(-dbeta*dbeta/128)
-                print simedge[i, j]
-                
+                simedge = exp(-dalpha*dalpha/128) * exp(-dbeta*dbeta/128)
+                if simedge > self.SIM_THRESHOLD:
+                    e_match[i,j] = alpha
+                    e_match[j,i] = beta
+                    v_match.add(i)
+                    v_match.add(j)
+                    
+        return e_match,list(v_match)
+
+    def create_triangles(self,edge_matches,v_matches,keypoints):
+        triangles = []
+        triangles_num = list(itertools.combinations(v_matches,3))
+        for keyindexi,keyindexj,keyindexk in triangles_num:
+            # print keyindexi,keyindexj,keyindexk
+            ix = keypoints[keyindexi].pt[0]
+            iy = -keypoints[keyindexi].pt[1]
+            jx = keypoints[keyindexj].pt[0]
+            jy = -keypoints[keyindexj].pt[1]
+            kx = keypoints[keyindexk].pt[0]
+            ky = -keypoints[keyindexk].pt[1]
+            vikx = float(kx - ix)
+            viky = float(ky - iy)
+            vijx = float(jx - ix)
+            vijy = float(jy - iy)
+            length_vik = sqrt(abs(vikx*vikx+viky*viky))
+            length_vij = sqrt(abs(vijx*vijx+vijy*vijy))
+            if length_vik == 0:
+                length_vik=1
+            if length_vij == 0:
+                length_vij=1
+            vcos = (vikx*vijx+viky*vijy)/length_vik/length_vij
+            delta1 = degrees(acos(round(vcos,13)))
+            vjkx = float(kx - jx)
+            vjky = float(ky - jy)
+            vjix = -vijx
+            vjiy = -vijy
+            length_vjk = sqrt(abs(vjkx*vjkx+vjky*vjky))
+            length_vji = sqrt(abs(vjix*vjix+vjiy*vjiy))
+            if length_vjk == 0:
+                length_vjk=1
+            if length_vji == 0:
+                length_vji=1
+            vcos = (vjkx*vjix+vjky*vjiy)/length_vjk/length_vji
+            delta2 = degrees(acos(round(vcos,13)))
+            triangles.append([keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],delta1,delta2,edge_matches[keyindexi,keyindexj],edge_matches[keyindexj,keyindexk],edge_matches[keyindexk,keyindexi]])
 
     def feature_matching(self, img1path, img2path):
         """Feature Matching
@@ -136,7 +181,8 @@ class TrainingHandler():
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         # self.drawKeyPoints(img1,img2,goodkeypoints1,goodkeypoints2)
-        self.similarity_keypoints(goodkeypoints1,goodkeypoints2)
+        ematch,vmatch = self.similarity_keypoints(goodkeypoints1,goodkeypoints2)
+        self.create_triangles(ematch,vmatch,goodkeypoints1)
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
