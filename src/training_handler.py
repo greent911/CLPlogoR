@@ -159,7 +159,7 @@ class TrainingHandler():
                     self.edgeIndexCodeDict[dictCode(edge_matches[i,j],edge_matches[j,i])] = True
                     # print edge_matches[i,j],edge_matches[j,i]
                     count = count + 1
-        print count 
+        # print count 
 
     def feature_matching(self, img1path, img2path):
         """Feature Matching
