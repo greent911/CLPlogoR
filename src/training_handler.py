@@ -18,6 +18,7 @@ class TrainingHandler():
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_LOWERBOUND = 1.0/3
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND = 3.0
         self.triangleSet = []
+        self.edge_indexij_values = []
         
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
@@ -106,6 +107,8 @@ class TrainingHandler():
 
     def create_triangles(self,edge_matches,v_matches,keypoints,descriptors):
         triangles_num = list(itertools.combinations(v_matches,3))
+        klength = len(keypoints)
+        e_match_new_check = np.zeros((klength,klength),bool)
         for keyindexi,keyindexj,keyindexk in triangles_num:
             # print keyindexi,keyindexj,keyindexk
             ix = keypoints[keyindexi].pt[0]
@@ -138,7 +141,24 @@ class TrainingHandler():
             delta2 = degrees(acos(round(vcos,13)))
             if delta2 < self.TRIANGLE_CONSTRAINT_ANGLE:
                 continue
+            if edge_matches[keyindexi,keyindexj] == 0.0 or edge_matches[keyindexj,keyindexk] == 0.0 or edge_matches[keyindexk,keyindexi] == 0.0:
+                continue
             self.triangleSet.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edge_matches[keyindexi,keyindexj],edge_matches[keyindexj,keyindexk],edge_matches[keyindexk,keyindexi]])
+            e_match_new_check[keyindexi,keyindexj] = True
+            e_match_new_check[keyindexj,keyindexi] = True
+            e_match_new_check[keyindexj,keyindexk] = True
+            e_match_new_check[keyindexk,keyindexj] = True
+            e_match_new_check[keyindexi,keyindexk] = True
+            e_match_new_check[keyindexk,keyindexi] = True
+        
+        # count = 0
+        for i in range(klength-1):
+            for j in range(i+1,klength):
+                if e_match_new_check[i,j] == True:
+                    self.edge_indexij_values.append([edge_matches[i,j],edge_matches[j,i]])
+                    # print edge_matches[i,j],edge_matches[j,i]
+                    # count = count + 1
+        # print count
 
     def feature_matching(self, img1path, img2path):
         """Feature Matching
