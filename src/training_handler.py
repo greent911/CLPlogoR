@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from math import atan, degrees, exp, acos, sqrt
 import itertools
+from math_formula import dictCode
 
 class TrainingHandler():
     def __init__(self):
@@ -18,7 +19,7 @@ class TrainingHandler():
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_LOWERBOUND = 1.0/3
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND = 3.0
         self.triangleSet = []
-        self.edge_indexij_values = []
+        self.edgeIndexCodeDict = {i+1: False for i in xrange(180*180)}
         
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
@@ -151,14 +152,14 @@ class TrainingHandler():
             e_match_new_check[keyindexi,keyindexk] = True
             e_match_new_check[keyindexk,keyindexi] = True
         
-        # count = 0
+        count = 0
         for i in range(klength-1):
             for j in range(i+1,klength):
                 if e_match_new_check[i,j] == True:
-                    self.edge_indexij_values.append([edge_matches[i,j],edge_matches[j,i]])
+                    self.edgeIndexCodeDict[dictCode(edge_matches[i,j],edge_matches[j,i])] = True
                     # print edge_matches[i,j],edge_matches[j,i]
-                    # count = count + 1
-        # print count
+                    count = count + 1
+        print count 
 
     def feature_matching(self, img1path, img2path):
         """Feature Matching
