@@ -4,6 +4,8 @@ from training_handler import TrainingHandler
 import math_formula
 from math import sqrt,degrees,acos
 import numpy as np
+
+
 class Recognizer():
     def createAtriangle(self,tripePoint,kp,des,imgpath):
         
@@ -87,8 +89,16 @@ class Recognizer():
         # print tr1anglesTuples,tr2anglesTuples
         if abs(tr1anglesTuples[0][1] - tr2anglesTuples[0][1]) < 2 and abs(tr1anglesTuples[1][1] - tr2anglesTuples[1][1]) < 2 and abs(tr1anglesTuples[2][1] - tr2anglesTuples[2][1]) < 2:
             if abs(triangle1[tr1anglesTuples[0][0]+5]-triangle2[tr2anglesTuples[0][0]+5]) < 2 and abs(triangle1[tr1anglesTuples[1][0]+5]-triangle2[tr2anglesTuples[1][0]+5]) < 2 and abs(triangle1[tr1anglesTuples[2][0]+5]-triangle2[tr2anglesTuples[2][0]+5]) < 2:
-                self.drawTrianglePair(triangle1,triangle2)
-                return True
+                matches = math_formula.flann.knnMatch(np.asarray([triangle1[0],triangle1[1],triangle1[2]]),np.asarray([triangle2[0],triangle2[1],triangle2[2]]),k=1)
+                # print matches[0][0].queryIdx,matches[0][0].trainIdx
+                # print matches[1][0].queryIdx,matches[1][0].trainIdx
+                # print matches[2][0].queryIdx,matches[2][0].trainIdx
+                tempset ={0,1,2}
+                if not tempset.difference({matches[0][0].trainIdx,matches[1][0].trainIdx,matches[2][0].trainIdx}):
+                    self.drawTrianglePair(triangle1,triangle2)
+                    return True
+                else:
+                    return False
             else:
                 return False
         else:
@@ -119,7 +129,7 @@ class Recognizer():
             # edgeFeatureList.append([alpha,beta])
             # print alpha,beta
             # print math_formula.dictCode(alpha,beta)
-            if edgeIndexCodeDict[math_formula.dictCode(alpha,beta)]==True:
+            if edgeIndexCodeDict[math_formula.dictCode(alpha,beta)]==True or edgeIndexCodeDict[math_formula.dictCode(beta,alpha)]==True:
                 # matchEdgePairNum.append([i,j,alpha,beta])
                 matchSimpleEdgePairNum.append([i,j])
                 matchPointNum.add(i)
