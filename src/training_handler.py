@@ -106,7 +106,7 @@ class TrainingHandler():
                     
         return e_match,list(v_match)
 
-    def create_triangles(self,edge_matches,v_matches,keypoints,descriptors):
+    def create_triangles(self,edge_matches,v_matches,keypoints,descriptors,imgpath):
         triangles_num = list(itertools.combinations(v_matches,3))
         klength = len(keypoints)
         e_match_new_check = np.zeros((klength,klength),bool)
@@ -144,7 +144,7 @@ class TrainingHandler():
                 continue
             if edge_matches[keyindexi,keyindexj] == 0.0 or edge_matches[keyindexj,keyindexk] == 0.0 or edge_matches[keyindexk,keyindexi] == 0.0:
                 continue
-            self.triangleSet.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edge_matches[keyindexi,keyindexj],edge_matches[keyindexj,keyindexk],edge_matches[keyindexk,keyindexi]])
+            self.triangleSet.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edge_matches[keyindexi,keyindexj],edge_matches[keyindexj,keyindexk],edge_matches[keyindexk,keyindexi],keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
             e_match_new_check[keyindexi,keyindexj] = True
             e_match_new_check[keyindexj,keyindexi] = True
             e_match_new_check[keyindexj,keyindexk] = True
@@ -152,13 +152,13 @@ class TrainingHandler():
             e_match_new_check[keyindexi,keyindexk] = True
             e_match_new_check[keyindexk,keyindexi] = True
         
-        count = 0
+        # count = 0
         for i in range(klength-1):
             for j in range(i+1,klength):
                 if e_match_new_check[i,j] == True:
                     self.edgeIndexCodeDict[dictCode(edge_matches[i,j],edge_matches[j,i])] = True
                     # print edge_matches[i,j],edge_matches[j,i]
-                    count = count + 1
+                    # count = count + 1
         # print count 
 
     def feature_matching(self, img1path, img2path):
@@ -205,7 +205,7 @@ class TrainingHandler():
         # cv2.destroyAllWindows()
         # self.drawKeyPoints(img1,img2,goodkeypoints1,goodkeypoints2)
         ematch,vmatch = self.similarity_keypoints(goodkeypoints1,goodkeypoints2)
-        self.create_triangles(ematch,vmatch,goodkeypoints1,goodkeydes1)
+        self.create_triangles(ematch,vmatch,goodkeypoints1,goodkeydes1,img1path)
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()

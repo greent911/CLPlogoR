@@ -3,8 +3,9 @@ import itertools
 from training_handler import TrainingHandler
 import math_formula
 from math import sqrt,degrees,acos
+import numpy as np
 class Recognizer():
-    def createAtriangle(self,tripePoint,kp,des):
+    def createAtriangle(self,tripePoint,kp,des,imgpath):
         
         keyindexi,keyindexj,keyindexk = list(tripePoint)
         # print tripePoint
@@ -42,11 +43,56 @@ class Recognizer():
         t_alpha = math_formula.computeRelativeAngle(kp[keyindexi].angle,vijx,vijy)
         t_beta = math_formula.computeRelativeAngle(kp[keyindexj].angle,vjkx,vjky)
         t_gamma = math_formula.computeRelativeAngle(kp[keyindexk].angle,-vikx,-viky)
-        return [des[keyindexi],des[keyindexj],des[keyindexk],delta1,delta2,t_alpha,t_beta,t_gamma]
+        return [des[keyindexi],des[keyindexj],des[keyindexk],delta1,delta2,t_alpha,t_beta,t_gamma,kp[keyindexi],kp[keyindexj],kp[keyindexk],imgpath]
+    
+    def drawTrianglePair(self,triangle1,triangle2):
+        img1 = cv2.imread(triangle1[11])
+        img2 = cv2.imread(triangle2[11])
+
+        h1, w1 = img1.shape[:2]
+        h2, w2 = img2.shape[:2]
+        nWidth = w1+w2
+        nHeight = h1+h2
+        newimg = np.zeros((nHeight, nWidth, 3), np.uint8)
+        newimg[:h2, :w2] = img2
+        newimg[h2:h2+h1, w2:w2+w1] = img1
+
+        pt_i = (int(triangle1[8].pt[0]+w2), int(triangle1[8].pt[1]+h2))
+        pt_j = (int(triangle1[9].pt[0]+w2), int(triangle1[9].pt[1]+h2))
+        pt_k = (int(triangle1[10].pt[0]+w2), int(triangle1[10].pt[1]+h2))
+        pt_ip = (int(triangle2[8].pt[0]), int(triangle2[8].pt[1]))
+        pt_jp = (int(triangle2[9].pt[0]), int(triangle2[9].pt[1]))
+        pt_kp = (int(triangle2[10].pt[0]), int(triangle2[10].pt[1]))
+
+        cv2.line(newimg, pt_i, pt_j, (255, 0, 0))
+        cv2.line(newimg, pt_j, pt_k, (255, 0, 0))
+        cv2.line(newimg, pt_i, pt_k, (255, 0, 0))
+        cv2.line(newimg, pt_ip, pt_jp, (255, 0, 0))
+        cv2.line(newimg, pt_jp, pt_kp, (255, 0, 0))
+        cv2.line(newimg, pt_ip, pt_kp, (255, 0, 0))
+
+        cv2.imshow('Matches',newimg)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     def triangleCompare(self,triangle1,triangle2):
-        # delta1
-        print abs(triangle1[3]-triangle2[3])
+        if 180.0 - triangle1[3] - triangle1[4] < 0.0 or 180.0 - triangle1[3] - triangle1[4] > 180.0:
+            print "wtf"
+        if 180.0 - triangle2[3] - triangle2[4] < 0.0 or 180.0 - triangle2[3] - triangle2[4] > 180.0:
+            print "wtf"
+        tr1angles = {0: triangle1[3],1: triangle1[4],2: 180.0 - triangle1[3] - triangle1[4]}
+        tr1anglesTuples = sorted(tr1angles.items(), key=lambda x: x[1])
+        tr2angles = {0: triangle2[3],1: triangle2[4],2: 180.0 - triangle2[3] - triangle2[4]}
+        tr2anglesTuples = sorted(tr2angles.items(), key=lambda x: x[1])
+        # print tr1anglesTuples,tr2anglesTuples
+        if abs(tr1anglesTuples[0][1] - tr2anglesTuples[0][1]) < 2 and abs(tr1anglesTuples[1][1] - tr2anglesTuples[1][1]) < 2 and abs(tr1anglesTuples[2][1] - tr2anglesTuples[2][1]) < 2:
+            if abs(triangle1[tr1anglesTuples[0][0]+5]-triangle2[tr2anglesTuples[0][0]+5]) < 2 and abs(triangle1[tr1anglesTuples[1][0]+5]-triangle2[tr2anglesTuples[1][0]+5]) < 2 and abs(triangle1[tr1anglesTuples[2][0]+5]-triangle2[tr2anglesTuples[2][0]+5]) < 2:
+                self.drawTrianglePair(triangle1,triangle2)
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def recognize(self,imgpath,edgeIndexCodeDict,triangleSet):
         img = cv2.imread(imgpath)
@@ -59,7 +105,7 @@ class Recognizer():
 
         kppairs_num = list(itertools.combinations(range(len(kp)),2))
         # print len(kppairs_num)
-        matchEdgePairNum = []
+        # matchEdgePairNum = []
         matchSimpleEdgePairNum = []
         matchPointNum = set()
         for i,j in kppairs_num:
@@ -74,7 +120,7 @@ class Recognizer():
             # print alpha,beta
             # print math_formula.dictCode(alpha,beta)
             if edgeIndexCodeDict[math_formula.dictCode(alpha,beta)]==True:
-                matchEdgePairNum.append([i,j,alpha,beta])
+                # matchEdgePairNum.append([i,j,alpha,beta])
                 matchSimpleEdgePairNum.append([i,j])
                 matchPointNum.add(i)
                 matchPointNum.add(j)
@@ -100,18 +146,22 @@ class Recognizer():
         
         queryImgTriangles = []
         while tripePointNum:
-            queryImgTriangles.append(self.createAtriangle(tripePointNum.pop(),kp,des))
+            queryImgTriangles.append(self.createAtriangle(tripePointNum.pop(),kp,des,imgpath))
         # print queryImgTriangles
-        print len(queryImgTriangles)
-
-        for queryTriangle in queryImgTriangles:
-            for trainedTriangle in triangleSet:
-                self.triangleCompare(queryTriangle,trainedTriangle)
+        print imgpath,'Possible Triangles Count:',len(queryImgTriangles)
+        
+        matchCount = 0
+        for i in range(len(queryImgTriangles)):
+            for j in range(len(triangleSet)):
+                if self.triangleCompare(queryImgTriangles[i],triangleSet[j]):
+                    matchCount = matchCount + 1
+                    # print i,j
+        print 'Triangle Feature Match Count:',matchCount
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
    trHandler.feature_matching('box.png','box_in_scene.png')
-   print len(trHandler.triangleSet)
+   print 'Length of Trained Triangle Set:',len(trHandler.triangleSet)
    recognizer = Recognizer()
    recognizer.recognize('box_in_scene.png',trHandler.edgeIndexCodeDict,trHandler.triangleSet)
    # recognizer.recognize('box.png',trHandler.edgeIndexCodeDict,trHandler.triangleSet)
