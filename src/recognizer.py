@@ -4,7 +4,8 @@ from training_handler import TrainingHandler
 import math_formula
 from math import sqrt,degrees,acos
 import numpy as np
-
+# from lshash import LSHash
+from scipy.cluster.vq import vq
 
 class Recognizer():
     def createAtriangle(self,tripePoint,kp,des,imgpath):
@@ -95,7 +96,7 @@ class Recognizer():
                 # print matches[2][0].queryIdx,matches[2][0].trainIdx
                 tempset ={0,1,2}
                 if not tempset.difference({matches[0][0].trainIdx,matches[1][0].trainIdx,matches[2][0].trainIdx}):
-                    # self.drawTrianglePair(triangle1,triangle2)
+                    self.drawTrianglePair(triangle1,triangle2)
                     return True
                 else:
                     return False
@@ -104,20 +105,24 @@ class Recognizer():
         else:
             return False
 
-    def recognize(self,imgpath,edgeIndexCodeDict,triangleFeaturesSetList):
+    def recognize(self,imgpath,trHandler):
         img = cv2.imread(imgpath)
-        
+
         # Initiate SIFT detector
         sift = cv2.SIFT()
 
         # find the keypoints and descriptors with SIFT
         kp, des = sift.detectAndCompute(img,None)
 
+        desArray = np.asarray(des)
+        keyIds = list(vq(desArray, trHandler.centroidsOfKmean2000[0])[0])
+
         kppairs_num = list(itertools.combinations(range(len(kp)),2))
         # print len(kppairs_num)
         # matchEdgePairNum = []
         matchSimpleEdgePairNum = []
         matchPointNum = set()
+        lsh = trHandler.edgeIndexLSH()
         for i,j in kppairs_num:
             ix = kp[i].pt[0]
             iy = -kp[i].pt[1]
@@ -125,18 +130,21 @@ class Recognizer():
             jy = -kp[j].pt[1]
             alpha = math_formula.computeRelativeAngle(kp[i].angle,(jx-ix),(jy-iy))
             beta = math_formula.computeRelativeAngle(kp[j].angle,(ix-jx),(iy-jy))
-            # edgeFeatureList.append([des[i],des[j],alpha,beta])
-            # edgeFeatureList.append([alpha,beta])
-            # print alpha,beta
-            # print math_formula.dictCode(alpha,beta)
+            
+
             tempIndexNum = math_formula.dictCode(alpha,beta) 
-            if edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and edgeIndexCodeDict[tempIndexNum+1]==True ):
+            if trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
                 # matchEdgePairNum.append([i,j,alpha,beta])
-                matchSimpleEdgePairNum.append([i,j])
-                matchPointNum.add(i)
-                matchPointNum.add(j)
-        
-        print len(matchSimpleEdgePairNum)
+                temp = lsh.query([keyIds[i],keyIds[j],alpha,beta])
+                if temp:
+                    for k in range(len(temp)):
+                        if keyIds[i]-temp[k][0][0] == 0 and keyIds[j]-temp[k][0][1] == 0:
+                            # print keyIds[i],keyIds[j],temp[k][0][0],temp[k][0][1]
+                            matchSimpleEdgePairNum.append([i,j])
+                            matchPointNum.add(i)
+                            matchPointNum.add(j)
+
+        print 'Edge Match Count:',len(matchSimpleEdgePairNum)
         # matchPointNum = {1,2,3}
         # matchSimpleEdgePairNum = [[1,2],[1,3],[2,3]]
 
@@ -164,8 +172,8 @@ class Recognizer():
         
         matchCount = 0
         for i in range(len(queryImgTriangles)):
-            for j in range(len(triangleFeaturesSetList)):
-                if self.triangleCompare(queryImgTriangles[i],triangleFeaturesSetList[j]):
+            for j in range(len(trHandler.triangleFeaturesSetList)):
+                if self.triangleCompare(queryImgTriangles[i],trHandler.triangleFeaturesSetList[j]):
                     matchCount = matchCount + 1
                     # print i,j
         print 'Triangle Feature Match Count:',matchCount
@@ -175,6 +183,6 @@ if __name__ == '__main__':
    trHandler.image_training('box.png','box_in_scene.png')
    print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
    recognizer = Recognizer()
-   recognizer.recognize('box_in_scene.png',trHandler.edgeIndexCodeDict,trHandler.triangleFeaturesSetList)
+   recognizer.recognize('box_in_scene.png',trHandler)
    # recognizer.recognize('box.png',trHandler.edgeIndexCodeDict,trHandler.triangleFeaturesSetList)
 

@@ -3,6 +3,8 @@ import numpy as np
 from math import atan, degrees, exp, acos, sqrt
 import itertools
 from math_formula import dictCode
+from scipy.cluster.vq import vq, kmeans 
+from lshash import LSHash
 
 class TrainingHandler():
     def __init__(self):
@@ -20,6 +22,11 @@ class TrainingHandler():
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND = 3.0
         self.triangleFeaturesSetList = []
         self.edgeIndexCodeDict = {i+1: False for i in xrange(180*180)}
+
+        self.trainedDescriptorsList = []
+        self.centroidsOfKmean2000 = tuple()
+        self.visualWordLabelIDs = []
+        self.the2IndexesOfIDandEdge2AnglesList = []
         
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
@@ -117,6 +124,9 @@ class TrainingHandler():
 
     def create_triangles(self,indexOfEdgeAngle,indexInEdge,keypoints,descriptors,imgpath):
         tripleListSetFromIndexInEdge = list(itertools.combinations(indexInEdge,3))
+        kpIndexOfInTriangle = set()
+        kpLength = len(keypoints)        
+        isAnEdgeInTriangles = np.zeros((kpLength,kpLength),bool)
         for keyindexi,keyindexj,keyindexk in tripleListSetFromIndexInEdge:
             ix = keypoints[keyindexi].pt[0]
             iy = -keypoints[keyindexi].pt[1]
@@ -158,9 +168,20 @@ class TrainingHandler():
             edgeij_anglej = indexOfEdgeAngle[keyindexj,keyindexi]
             edgejk_anglek = indexOfEdgeAngle[keyindexk,keyindexi]
             edgeik_anglei = indexOfEdgeAngle[keyindexi,keyindexk]
+            
+            kpIndexOfInTriangle.add(keyindexi)
+            kpIndexOfInTriangle.add(keyindexj)
+            kpIndexOfInTriangle.add(keyindexk)
 
             self.triangleFeaturesSetList.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
 
+            isAnEdgeInTriangles[keyindexi,keyindexj] = True
+            isAnEdgeInTriangles[keyindexj,keyindexk] = True
+            isAnEdgeInTriangles[keyindexk,keyindexi] = True
+            isAnEdgeInTriangles[keyindexj,keyindexi] = True
+            isAnEdgeInTriangles[keyindexk,keyindexi] = True
+            isAnEdgeInTriangles[keyindexi,keyindexk] = True
+            
             self.edgeIndexCodeDict[dictCode(edgeij_anglei,edgeij_anglej)] = True
             self.edgeIndexCodeDict[dictCode(edgeij_anglej,edgeij_anglei)] = True
             self.edgeIndexCodeDict[dictCode(edgeik_anglei,edgeik_anglek)] = True
@@ -168,6 +189,7 @@ class TrainingHandler():
             self.edgeIndexCodeDict[dictCode(edgejk_anglej,edgejk_anglek)] = True
             self.edgeIndexCodeDict[dictCode(edgejk_anglek,edgejk_anglej)] = True
 
+        return kpIndexOfInTriangle, isAnEdgeInTriangles
 
     def image_training(self, img1path, img2path):
         img1 = cv2.imread(img1path) # 1:queryImage is going to be trained
@@ -217,9 +239,37 @@ class TrainingHandler():
         # self.drawKeyPoints(img1,img2,goodkeypoints1,goodkeypoints2)
 
         edgeIndexArray,indexInEdge = self.generate_EdgeIndexArray_IndexInEdge(goodkeypoints1,goodkeypoints2)
-        self.create_triangles(edgeIndexArray,indexInEdge,goodkeypoints1,goodkeydes1,img1path)
+
+        kpIndexOfInTriangle,isAnEdgeInTriangles = self.create_triangles(edgeIndexArray,indexInEdge,goodkeypoints1,goodkeydes1,img1path)
+
+        indexOfIDstartPosition = len(self.trainedDescriptorsList)
+        for keyindex in kpIndexOfInTriangle:
+            self.trainedDescriptorsList.append(goodkeydes1[keyindex])
+        desArray = np.asarray(self.trainedDescriptorsList)
+        # desArray = whiten(desArray)
+        self.centroidsOfKmean2000 = kmeans(desArray, 2000)
+        self.visualWordLabelIDs  = list(vq(desArray, self.centroidsOfKmean2000[0])[0])
+        keyInTriangleLabelIDDict = dict(zip(list(kpIndexOfInTriangle), range(indexOfIDstartPosition,indexOfIDstartPosition+len(kpIndexOfInTriangle))))
+        temp2keyList = list(itertools.combinations(list(kpIndexOfInTriangle),2))
+        
+        for i,j in temp2keyList:
+            if isAnEdgeInTriangles[i,j]:
+                self.the2IndexesOfIDandEdge2AnglesList.append([keyInTriangleLabelIDDict[i],keyInTriangleLabelIDDict[j],edgeIndexArray[i,j],edgeIndexArray[j,i]])
+                
+    def edgeIndexLSH(self):
+        lsh = LSHash(32, 4)
+        for i in range(len(self.the2IndexesOfIDandEdge2AnglesList)):
+            a=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][0]]
+            b=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][1]]
+            c=self.the2IndexesOfIDandEdge2AnglesList[i][2]
+            d=self.the2IndexesOfIDandEdge2AnglesList[i][3]
+            lsh.index([a,b,c,d])
+            lsh.index([b,a,d,c])
+        return lsh
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
    trHandler.image_training('box.png','box_in_scene.png')
+   # trHandler.image_training('box.png','box_in_scene.png')
+   # trHandler.edgeIndexLSH()
    print len(trHandler.triangleFeaturesSetList)
