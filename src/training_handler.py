@@ -157,6 +157,7 @@ class TrainingHandler():
             for j in range(i+1,klength):
                 if e_match_new_check[i,j] == True:
                     self.edgeIndexCodeDict[dictCode(edge_matches[i,j],edge_matches[j,i])] = True
+                    self.edgeIndexCodeDict[dictCode(edge_matches[j,i],edge_matches[i,j])] = True
                     # print edge_matches[i,j],edge_matches[j,i]
                     # count = count + 1
         # print count 

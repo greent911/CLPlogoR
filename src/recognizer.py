@@ -95,7 +95,7 @@ class Recognizer():
                 # print matches[2][0].queryIdx,matches[2][0].trainIdx
                 tempset ={0,1,2}
                 if not tempset.difference({matches[0][0].trainIdx,matches[1][0].trainIdx,matches[2][0].trainIdx}):
-                    self.drawTrianglePair(triangle1,triangle2)
+                    # self.drawTrianglePair(triangle1,triangle2)
                     return True
                 else:
                     return False
@@ -129,14 +129,15 @@ class Recognizer():
             # edgeFeatureList.append([alpha,beta])
             # print alpha,beta
             # print math_formula.dictCode(alpha,beta)
-            if edgeIndexCodeDict[math_formula.dictCode(alpha,beta)]==True or edgeIndexCodeDict[math_formula.dictCode(beta,alpha)]==True:
+            tempIndexNum = math_formula.dictCode(alpha,beta) 
+            if edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and edgeIndexCodeDict[tempIndexNum+1]==True ):
                 # matchEdgePairNum.append([i,j,alpha,beta])
                 matchSimpleEdgePairNum.append([i,j])
                 matchPointNum.add(i)
                 matchPointNum.add(j)
         
-        # matchPointNum = {1,2,3,4,5}
-        # matchSimpleEdgePairNum = [[1,2],[1,3],[2,3],[2,4],[1,4],[3,5]]
+        # matchPointNum = {1,2,3}
+        # matchSimpleEdgePairNum = [[1,2],[1,3],[2,3]]
 
         tempDict = {i: set() for i in matchPointNum}
         for i,j in matchSimpleEdgePairNum:
@@ -153,7 +154,7 @@ class Recognizer():
 
         # print tripePointNum
         # print len(tripePointNum)
-        
+
         queryImgTriangles = []
         while tripePointNum:
             queryImgTriangles.append(self.createAtriangle(tripePointNum.pop(),kp,des,imgpath))
