@@ -18,7 +18,7 @@ class TrainingHandler():
         self.TRIANGLE_CONSTRAINT_ANGLE = 15.0
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_LOWERBOUND = 1.0/3
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND = 3.0
-        self.triangleSet = []
+        self.triangleFeaturesSetList = []
         self.edgeIndexCodeDict = {i+1: False for i in xrange(180*180)}
         
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
@@ -69,17 +69,26 @@ class TrainingHandler():
             rangle = 360 - (angle - (360.0 - siftangle))
         return rangle
 
-    def similarity_keypoints(self, keypoints1, keypoints2):
-        p1length = len(keypoints1)
+    def generate_EdgeIndexArray_IndexInEdge(self, keypoints1, keypoints2):
+        kpLength = len(keypoints1)
 
-        e_match = np.zeros((p1length,p1length),float)
-        v_match = set()
-        for i in range(p1length-1):
-            for j in range(i+1,p1length):
+        # keypoints1[i], keypoints1[j]
+        # ex:alpha:30 i------j beta:60
+        # kpIndexOfEdgeAngleArray:If two points are not matching,it will be 0.
+        # [ 0.,  30.,  128.]
+        # [ 60.,  0.,  0.]
+        # [ 60.,  0.,  0.]
+        kpIndexOfEdgeAngleArray = np.zeros((kpLength,kpLength),float)
+        # ex:kpIndexOfInEdge={13,23,31,34} i=13,23,31,34 are in edges,keypoints1[i]
+        kpIndexOfInEdge = set()
+        for i in range(kpLength-1):
+            for j in range(i+1,kpLength):
+                # Change coordinate to:->x ^y (opencv:->x vy)
                 ix = keypoints1[i].pt[0]
                 iy = -keypoints1[i].pt[1]
                 jx = keypoints1[j].pt[0]
                 jy = -keypoints1[j].pt[1]
+
                 vix = float(jx - ix)
                 viy = float(jy - iy)
                 # vjx = -vix
@@ -99,19 +108,16 @@ class TrainingHandler():
                 dbeta = abs(beta - betap)
                 simedge = exp(-dalpha*dalpha/128) * exp(-dbeta*dbeta/128)
                 if simedge > self.SIM_THRESHOLD:
-                    e_match[i,j] = alpha
-                    e_match[j,i] = beta
-                    v_match.add(i)
-                    v_match.add(j)
+                    kpIndexOfEdgeAngleArray[i,j] = alpha
+                    kpIndexOfEdgeAngleArray[j,i] = beta
+                    kpIndexOfInEdge.add(i)
+                    kpIndexOfInEdge.add(j)
                     
-        return e_match,list(v_match)
+        return kpIndexOfEdgeAngleArray,list(kpIndexOfInEdge)
 
-    def create_triangles(self,edge_matches,v_matches,keypoints,descriptors,imgpath):
-        triangles_num = list(itertools.combinations(v_matches,3))
-        klength = len(keypoints)
-        e_match_new_check = np.zeros((klength,klength),bool)
-        for keyindexi,keyindexj,keyindexk in triangles_num:
-            # print keyindexi,keyindexj,keyindexk
+    def create_triangles(self,indexOfEdgeAngle,indexInEdge,keypoints,descriptors,imgpath):
+        tripleListSetFromIndexInEdge = list(itertools.combinations(indexInEdge,3))
+        for keyindexi,keyindexj,keyindexk in tripleListSetFromIndexInEdge:
             ix = keypoints[keyindexi].pt[0]
             iy = -keypoints[keyindexi].pt[1]
             jx = keypoints[keyindexj].pt[0]
@@ -124,6 +130,7 @@ class TrainingHandler():
             vijy = float(jy - iy)
             length_vik = sqrt(abs(vikx*vikx+viky*viky))
             length_vij = sqrt(abs(vijx*vijx+vijy*vijy))
+            # Add some constraints for generating triangles
             if length_vik < self.TRIANGLE_CONSTRAINT_DIST or length_vij < self.TRIANGLE_CONSTRAINT_DIST or length_vij/length_vik < self.TRIANGLE_CONSTRAINT_ECCENTRICITY_LOWERBOUND or length_vij/length_vik > self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND:
                 continue
             vcos = (vikx*vijx+viky*vijy)/length_vik/length_vij
@@ -142,31 +149,29 @@ class TrainingHandler():
             delta2 = degrees(acos(round(vcos,13)))
             if delta2 < self.TRIANGLE_CONSTRAINT_ANGLE:
                 continue
-            if edge_matches[keyindexi,keyindexj] == 0.0 or edge_matches[keyindexj,keyindexk] == 0.0 or edge_matches[keyindexk,keyindexi] == 0.0:
-                continue
-            self.triangleSet.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edge_matches[keyindexi,keyindexj],edge_matches[keyindexj,keyindexk],edge_matches[keyindexk,keyindexi],keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
-            e_match_new_check[keyindexi,keyindexj] = True
-            e_match_new_check[keyindexj,keyindexi] = True
-            e_match_new_check[keyindexj,keyindexk] = True
-            e_match_new_check[keyindexk,keyindexj] = True
-            e_match_new_check[keyindexi,keyindexk] = True
-            e_match_new_check[keyindexk,keyindexi] = True
-        
-        # count = 0
-        for i in range(klength-1):
-            for j in range(i+1,klength):
-                if e_match_new_check[i,j] == True:
-                    self.edgeIndexCodeDict[dictCode(edge_matches[i,j],edge_matches[j,i])] = True
-                    self.edgeIndexCodeDict[dictCode(edge_matches[j,i],edge_matches[i,j])] = True
-                    # print edge_matches[i,j],edge_matches[j,i]
-                    # count = count + 1
-        # print count 
 
-    def feature_matching(self, img1path, img2path):
-        """Feature Matching
-        """
-        img1 = cv2.imread(img1path) # queryImage
-        img2 = cv2.imread(img2path) # trainImage
+            edgeij_anglei = indexOfEdgeAngle[keyindexi,keyindexj]
+            edgejk_anglej = indexOfEdgeAngle[keyindexj,keyindexk]
+            edgeik_anglek = indexOfEdgeAngle[keyindexk,keyindexi]
+            if edgeij_anglei == 0.0 or edgejk_anglej == 0.0 or edgeik_anglek == 0.0:
+                continue
+            edgeij_anglej = indexOfEdgeAngle[keyindexj,keyindexi]
+            edgejk_anglek = indexOfEdgeAngle[keyindexk,keyindexi]
+            edgeik_anglei = indexOfEdgeAngle[keyindexi,keyindexk]
+
+            self.triangleFeaturesSetList.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
+
+            self.edgeIndexCodeDict[dictCode(edgeij_anglei,edgeij_anglej)] = True
+            self.edgeIndexCodeDict[dictCode(edgeij_anglej,edgeij_anglei)] = True
+            self.edgeIndexCodeDict[dictCode(edgeik_anglei,edgeik_anglek)] = True
+            self.edgeIndexCodeDict[dictCode(edgeik_anglek,edgeik_anglei)] = True
+            self.edgeIndexCodeDict[dictCode(edgejk_anglej,edgejk_anglek)] = True
+            self.edgeIndexCodeDict[dictCode(edgejk_anglek,edgejk_anglej)] = True
+
+
+    def image_training(self, img1path, img2path):
+        img1 = cv2.imread(img1path) # 1:queryImage is going to be trained
+        img2 = cv2.imread(img2path) # 2:trainImage trains queryImage
 
         # Initiate SIFT detector
         sift = cv2.SIFT()
@@ -181,14 +186,18 @@ class TrainingHandler():
         for i,(m,n) in enumerate(matches):
             if m.distance < self.DISTCOMPAREFACTOR*n.distance:
                 goodmatches.append(m)
+
                 # print i
         # print goodmatches
         # print goodmatches[0].distance
         # print matches[233][0].distance
         
         indices = range(len(goodmatches))
+        
         # indices.sort(key=lambda i: goodmatches[i].distance)
 
+        # The matching SIFT keypoints of queryImage and trainImage are at the same indexes
+        # And store the matching SIFT descriptors of queryImage
         goodkeypoints1 = []
         goodkeypoints2 = []
         goodkeydes1 = []
@@ -196,6 +205,7 @@ class TrainingHandler():
             goodkeypoints1.append(kp1[goodmatches[i].queryIdx])
             goodkeypoints2.append(kp2[goodmatches[i].trainIdx])
             goodkeydes1.append(des1[goodmatches[i].queryIdx])
+
             # print kp2[goodmatches[i].trainIdx].pt
         # test = cv2.drawKeypoints(img2,[goodkeypoints2[47]],flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         # test = cv2.drawKeypoints(img2,[goodkeypoints2[11]],flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -205,10 +215,11 @@ class TrainingHandler():
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         # self.drawKeyPoints(img1,img2,goodkeypoints1,goodkeypoints2)
-        ematch,vmatch = self.similarity_keypoints(goodkeypoints1,goodkeypoints2)
-        self.create_triangles(ematch,vmatch,goodkeypoints1,goodkeydes1,img1path)
+
+        edgeIndexArray,indexInEdge = self.generate_EdgeIndexArray_IndexInEdge(goodkeypoints1,goodkeypoints2)
+        self.create_triangles(edgeIndexArray,indexInEdge,goodkeypoints1,goodkeydes1,img1path)
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
-   trHandler.feature_matching('box.png','box_in_scene.png')
-   print len(trHandler.triangleSet)
+   trHandler.image_training('box.png','box_in_scene.png')
+   print len(trHandler.triangleFeaturesSetList)

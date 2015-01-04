@@ -104,7 +104,7 @@ class Recognizer():
         else:
             return False
 
-    def recognize(self,imgpath,edgeIndexCodeDict,triangleSet):
+    def recognize(self,imgpath,edgeIndexCodeDict,triangleFeaturesSetList):
         img = cv2.imread(imgpath)
         
         # Initiate SIFT detector
@@ -136,6 +136,7 @@ class Recognizer():
                 matchPointNum.add(i)
                 matchPointNum.add(j)
         
+        print len(matchSimpleEdgePairNum)
         # matchPointNum = {1,2,3}
         # matchSimpleEdgePairNum = [[1,2],[1,3],[2,3]]
 
@@ -163,17 +164,17 @@ class Recognizer():
         
         matchCount = 0
         for i in range(len(queryImgTriangles)):
-            for j in range(len(triangleSet)):
-                if self.triangleCompare(queryImgTriangles[i],triangleSet[j]):
+            for j in range(len(triangleFeaturesSetList)):
+                if self.triangleCompare(queryImgTriangles[i],triangleFeaturesSetList[j]):
                     matchCount = matchCount + 1
                     # print i,j
         print 'Triangle Feature Match Count:',matchCount
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
-   trHandler.feature_matching('box.png','box_in_scene.png')
-   print 'Length of Trained Triangle Set:',len(trHandler.triangleSet)
+   trHandler.image_training('box.png','box_in_scene.png')
+   print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
    recognizer = Recognizer()
-   recognizer.recognize('box_in_scene.png',trHandler.edgeIndexCodeDict,trHandler.triangleSet)
-   # recognizer.recognize('box.png',trHandler.edgeIndexCodeDict,trHandler.triangleSet)
+   recognizer.recognize('box_in_scene.png',trHandler.edgeIndexCodeDict,trHandler.triangleFeaturesSetList)
+   # recognizer.recognize('box.png',trHandler.edgeIndexCodeDict,trHandler.triangleFeaturesSetList)
 
