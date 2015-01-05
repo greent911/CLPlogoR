@@ -5,6 +5,7 @@ import itertools
 from math_formula import dictCode
 from scipy.cluster.vq import vq, kmeans 
 from lshash import LSHash
+import time
 
 class TrainingHandler():
     def __init__(self):
@@ -88,6 +89,7 @@ class TrainingHandler():
         kpIndexOfEdgeAngleArray = np.zeros((kpLength,kpLength),float)
         # ex:kpIndexOfInEdge={13,23,31,34} i=13,23,31,34 are in edges,keypoints1[i]
         kpIndexOfInEdge = set()
+        indexOfEdgePairs = []
         for i in range(kpLength-1):
             for j in range(i+1,kpLength):
                 # Change coordinate to:->x ^y (opencv:->x vy)
@@ -119,15 +121,31 @@ class TrainingHandler():
                     kpIndexOfEdgeAngleArray[j,i] = beta
                     kpIndexOfInEdge.add(i)
                     kpIndexOfInEdge.add(j)
+                    indexOfEdgePairs.append([i,j])
                     
-        return kpIndexOfEdgeAngleArray,list(kpIndexOfInEdge)
+        return kpIndexOfEdgeAngleArray,list(kpIndexOfInEdge),indexOfEdgePairs
 
-    def create_triangles(self,indexOfEdgeAngle,indexInEdge,keypoints,descriptors,imgpath):
-        tripleListSetFromIndexInEdge = list(itertools.combinations(indexInEdge,3))
+    def create_triangles(self,indexOfEdgeAngle,indexInEdge,indexOfEdgePairs,keypoints,descriptors,imgpath):
         kpIndexOfInTriangle = set()
         kpLength = len(keypoints)        
         isAnEdgeInTriangles = np.zeros((kpLength,kpLength),bool)
-        for keyindexi,keyindexj,keyindexk in tripleListSetFromIndexInEdge:
+
+        # new method compute triples 0.17s
+        indexHavePairDict = {i: set() for i in indexInEdge}
+        for i,j in indexOfEdgePairs:
+            indexHavePairDict[i].add(j)
+            indexHavePairDict[j].add(i)
+        tripleListSet = []
+        for i,j in indexOfEdgePairs:
+            tempset = indexHavePairDict[i].intersection(indexHavePairDict[j])
+            while tempset:
+                temps = {i,j,tempset.pop()}
+                if temps not in tripleListSet:
+                    tripleListSet.append(temps)
+        for keyindexi,keyindexj,keyindexk in tripleListSet:
+        # old method 0.27s
+        # tripleListSetFromIndexInEdge = list(itertools.combinations(indexInEdge,3))
+        # for keyindexi,keyindexj,keyindexk in tripleListSetFromIndexInEdge:
             ix = keypoints[keyindexi].pt[0]
             iy = -keypoints[keyindexi].pt[1]
             jx = keypoints[keyindexj].pt[0]
@@ -238,10 +256,11 @@ class TrainingHandler():
         # cv2.destroyAllWindows()
         # self.drawKeyPoints(img1,img2,goodkeypoints1,goodkeypoints2)
 
-        edgeIndexArray,indexInEdge = self.generate_EdgeIndexArray_IndexInEdge(goodkeypoints1,goodkeypoints2)
-
-        kpIndexOfInTriangle,isAnEdgeInTriangles = self.create_triangles(edgeIndexArray,indexInEdge,goodkeypoints1,goodkeydes1,img1path)
-
+        edgeIndexArray,indexInEdge,indexOfEdgePairs = self.generate_EdgeIndexArray_IndexInEdge(goodkeypoints1,goodkeypoints2)
+        tStart = time.time()
+        kpIndexOfInTriangle,isAnEdgeInTriangles = self.create_triangles(edgeIndexArray,indexInEdge,indexOfEdgePairs,goodkeypoints1,goodkeydes1,img1path)
+        tEnd = time.time()
+        print "Creating triangles cost %f sec" % (tEnd - tStart)
         indexOfIDstartPosition = len(self.trainedDescriptorsList)
         for keyindex in kpIndexOfInTriangle:
             self.trainedDescriptorsList.append(goodkeydes1[keyindex])
