@@ -264,10 +264,6 @@ class TrainingHandler():
         indexOfIDstartPosition = len(self.trainedDescriptorsList)
         for keyindex in kpIndexOfInTriangle:
             self.trainedDescriptorsList.append(goodkeydes1[keyindex])
-        desArray = np.asarray(self.trainedDescriptorsList)
-        # desArray = whiten(desArray)
-        self.centroidsOfKmean2000 = kmeans(desArray, 2000)
-        self.visualWordLabelIDs  = list(vq(desArray, self.centroidsOfKmean2000[0])[0])
         keyInTriangleLabelIDDict = dict(zip(list(kpIndexOfInTriangle), range(indexOfIDstartPosition,indexOfIDstartPosition+len(kpIndexOfInTriangle))))
         temp2keyList = list(itertools.combinations(list(kpIndexOfInTriangle),2))
         
@@ -286,9 +282,21 @@ class TrainingHandler():
             lsh.index([b,a,d,c])
         return lsh
 
+    def training_imageSet(self,setOfimgPaths):
+        imgCount = len(setOfimgPaths)
+        # for test, should not use it
+        for i in range(imgCount-1):
+            for j in range(i+1,imgCount):
+        # for i in range(imgCount):
+        #     for j in range(imgCount):
+                if i != j:
+                    self.image_training(setOfimgPaths[i],setOfimgPaths[j])
+        desArray = np.asarray(self.trainedDescriptorsList)
+        self.centroidsOfKmean2000 = kmeans(desArray, 2000)
+        self.visualWordLabelIDs  = list(vq(desArray, self.centroidsOfKmean2000[0])[0])
+
 if __name__ == '__main__':
    trHandler = TrainingHandler()
-   trHandler.image_training('box.png','box_in_scene.png')
-   # trHandler.image_training('box.png','box_in_scene.png')
+   trHandler.training_imageSet(['box.png','box_in_scene.png'])
    # trHandler.edgeIndexLSH()
    print len(trHandler.triangleFeaturesSetList)

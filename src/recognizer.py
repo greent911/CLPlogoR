@@ -180,9 +180,10 @@ class Recognizer():
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
-   trHandler.image_training('box.png','box_in_scene.png')
+   # trHandler.image_training('box.png','box_in_scene.png')
+   trHandler.training_imageSet(['box.png','box_in_scene.png'])
    print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
    recognizer = Recognizer()
    recognizer.recognize('box_in_scene.png',trHandler)
-   # recognizer.recognize('box.png',trHandler.edgeIndexCodeDict,trHandler.triangleFeaturesSetList)
+   # recognizer.recognize('box_query.png',trHandler)
 
