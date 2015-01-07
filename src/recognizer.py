@@ -123,7 +123,6 @@ class Recognizer():
         # print len(kppairs_num)
         matchSimpleEdgePairNum = []
         matchPointNum = set()
-        # tStart = time.time()        
         for i,j in kppairs_num:
             ix = kp[i].pt[0]
             iy = -kp[i].pt[1]
@@ -149,8 +148,6 @@ class Recognizer():
                         matchPointNum.add(j)
 
         print 'Edge Match Count:',len(matchSimpleEdgePairNum)
-        # tEnd = time.time()
-        # print "cost %f sec" % (tEnd - tStart)
         # matchPointNum = {1,2,3}
         # matchSimpleEdgePairNum = [[1,2],[1,3],[2,3]]
 
@@ -179,11 +176,12 @@ class Recognizer():
         matchCount = 0
         for i in range(len(queryImgTriangles)):
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
-            if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
-                self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[queryResult[0][0][1]])
-                matchCount = matchCount + 1
-                # print queryResult[0]
-                # print queryResult[0][0][1]
+            if queryResult:
+                if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
+                    # self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[queryResult[0][0][1]])
+                    matchCount = matchCount + 1
+                    # print queryResult[0]
+                    print queryResult[0][0][1]
 
             # old
             # for j in range(len(trHandler.triangleFeaturesSetList)):
@@ -195,9 +193,13 @@ class Recognizer():
 if __name__ == '__main__':
    trHandler = TrainingHandler()
    # trHandler.image_training('box.png','box_in_scene.png')
-   trHandler.training_imageSet(['box.png','box_in_scene.png'])
+   # trHandler.training_imageSet(['box.png','box_in_scene.png'])
+   trHandler.training_imageSet(['box.png','box_query.png'])
    print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
    recognizer = Recognizer()
-   # recognizer.recognize('box_in_scene.png',trHandler)
-   recognizer.recognize('box_query.png',trHandler)
+   tStart = time.time()        
+   recognizer.recognize('box_in_scene.png',trHandler)
+   # recognizer.recognize('box_query.png',trHandler)
+   tEnd = time.time()
+   print "cost %f sec" % (tEnd - tStart)
 
