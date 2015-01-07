@@ -6,9 +6,10 @@ from math import sqrt,degrees,acos
 import numpy as np
 # from lshash import LSHash
 from scipy.cluster.vq import vq
+import time
 
 class Recognizer():
-    def createAtriangle(self,tripePoint,kp,des,imgpath):
+    def createAtriangle(self,tripePoint,kp,keyIds,imgpath):
         
         keyindexi,keyindexj,keyindexk = list(tripePoint)
         # print tripePoint
@@ -46,7 +47,7 @@ class Recognizer():
         t_alpha = math_formula.computeRelativeAngle(kp[keyindexi].angle,vijx,vijy)
         t_beta = math_formula.computeRelativeAngle(kp[keyindexj].angle,vjkx,vjky)
         t_gamma = math_formula.computeRelativeAngle(kp[keyindexk].angle,-vikx,-viky)
-        return [des[keyindexi],des[keyindexj],des[keyindexk],delta1,delta2,t_alpha,t_beta,t_gamma,kp[keyindexi],kp[keyindexj],kp[keyindexk],imgpath]
+        return [keyIds[keyindexi],keyIds[keyindexj],keyIds[keyindexk],delta1,delta2,t_alpha,t_beta,t_gamma,kp[keyindexi],kp[keyindexj],kp[keyindexk],imgpath]
     
     def drawTrianglePair(self,triangle1,triangle2):
         img1 = cv2.imread(triangle1[11])
@@ -115,36 +116,41 @@ class Recognizer():
         kp, des = sift.detectAndCompute(img,None)
 
         desArray = np.asarray(des)
-        keyIds = list(vq(desArray, trHandler.centroidsOfKmean2000[0])[0])
+        Ids = list(vq(desArray, trHandler.centroidsOfKmean2000[0])[0])
+        keyIds = [x*1000 for x in Ids]
 
         kppairs_num = list(itertools.combinations(range(len(kp)),2))
         # print len(kppairs_num)
-        # matchEdgePairNum = []
         matchSimpleEdgePairNum = []
         matchPointNum = set()
-        lsh = trHandler.edgeIndexLSH()
+        # tStart = time.time()        
         for i,j in kppairs_num:
             ix = kp[i].pt[0]
             iy = -kp[i].pt[1]
             jx = kp[j].pt[0]
             jy = -kp[j].pt[1]
-            alpha = math_formula.computeRelativeAngle(kp[i].angle,(jx-ix),(jy-iy))
-            beta = math_formula.computeRelativeAngle(kp[j].angle,(ix-jx),(iy-jy))
-            
+            vix = jx - ix
+            viy = jy - iy
+            # if sqrt(abs(vix*vix+viy*viy)) < trHandler.TRIANGLE_CONSTRAINT_DIST:
+            #     continue
+            alpha = math_formula.computeRelativeAngle(kp[i].angle,vix,viy)
+            beta = math_formula.computeRelativeAngle(kp[j].angle,-vix,-viy)
 
             tempIndexNum = math_formula.dictCode(alpha,beta) 
             if trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
-                # matchEdgePairNum.append([i,j,alpha,beta])
-                temp = lsh.query([keyIds[i],keyIds[j],alpha,beta])
+                temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
                 if temp:
-                    for k in range(len(temp)):
-                        if keyIds[i]-temp[k][0][0] == 0 and keyIds[j]-temp[k][0][1] == 0:
-                            # print keyIds[i],keyIds[j],temp[k][0][0],temp[k][0][1]
-                            matchSimpleEdgePairNum.append([i,j])
-                            matchPointNum.add(i)
-                            matchPointNum.add(j)
+                    if temp[0][1] < 1000 and keyIds[i]-temp[0][0][0] == 0 and keyIds[j]-temp[0][0][1] == 0:
+                        # print keyIds[i],keyIds[j],temp[k][0][0],temp[k][0][1]
+                        # print alpha,beta,temp[k][0][2],temp[k][0][3]
+                        # print temp[0][1]
+                        matchSimpleEdgePairNum.append([i,j])
+                        matchPointNum.add(i)
+                        matchPointNum.add(j)
 
         print 'Edge Match Count:',len(matchSimpleEdgePairNum)
+        # tEnd = time.time()
+        # print "cost %f sec" % (tEnd - tStart)
         # matchPointNum = {1,2,3}
         # matchSimpleEdgePairNum = [[1,2],[1,3],[2,3]]
 
@@ -166,15 +172,23 @@ class Recognizer():
 
         queryImgTriangles = []
         while tripePointNum:
-            queryImgTriangles.append(self.createAtriangle(tripePointNum.pop(),kp,des,imgpath))
+            queryImgTriangles.append(self.createAtriangle(tripePointNum.pop(),kp,keyIds,imgpath))
         # print queryImgTriangles
         print imgpath,'Possible Triangles Count:',len(queryImgTriangles)
         
         matchCount = 0
         for i in range(len(queryImgTriangles)):
-            for j in range(len(trHandler.triangleFeaturesSetList)):
-                if self.triangleCompare(queryImgTriangles[i],trHandler.triangleFeaturesSetList[j]):
-                    matchCount = matchCount + 1
+            queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
+            if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
+                self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[queryResult[0][0][1]])
+                matchCount = matchCount + 1
+                # print queryResult[0]
+                # print queryResult[0][0][1]
+
+            # old
+            # for j in range(len(trHandler.triangleFeaturesSetList)):
+            #     if self.triangleCompare(queryImgTriangles[i],trHandler.triangleFeaturesSetList[j]):
+            #         matchCount = matchCount + 1
                     # print i,j
         print 'Triangle Feature Match Count:',matchCount
 
@@ -184,6 +198,6 @@ if __name__ == '__main__':
    trHandler.training_imageSet(['box.png','box_in_scene.png'])
    print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
    recognizer = Recognizer()
-   recognizer.recognize('box_in_scene.png',trHandler)
-   # recognizer.recognize('box_query.png',trHandler)
+   # recognizer.recognize('box_in_scene.png',trHandler)
+   recognizer.recognize('box_query.png',trHandler)
 

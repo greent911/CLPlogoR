@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from math import atan, degrees, exp, acos, sqrt
-import itertools
 from math_formula import dictCode
 from scipy.cluster.vq import vq, kmeans 
 from lshash import LSHash
@@ -27,7 +26,9 @@ class TrainingHandler():
         self.trainedDescriptorsList = []
         self.centroidsOfKmean2000 = tuple()
         self.visualWordLabelIDs = []
-        self.the2IndexesOfIDandEdge2AnglesList = []
+        self.edgesIndexLSH = LSHash(32, 4)
+        self.trianglesIndexLSH = LSHash(32, 8)
+        self.triangleVWwith6anglesFeatureList = []
         
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
@@ -127,10 +128,8 @@ class TrainingHandler():
 
     def create_triangles(self,indexOfEdgeAngle,indexInEdge,indexOfEdgePairs,keypoints,descriptors,imgpath):
         kpIndexOfInTriangle = set()
-        kpLength = len(keypoints)        
-        isAnEdgeInTriangles = np.zeros((kpLength,kpLength),bool)
+        key3indexandDegreesofTriangle = list()
 
-        # new method compute triples 0.17s
         indexHavePairDict = {i: set() for i in indexInEdge}
         for i,j in indexOfEdgePairs:
             indexHavePairDict[i].add(j)
@@ -143,9 +142,6 @@ class TrainingHandler():
                 if temps not in tripleListSet:
                     tripleListSet.append(temps)
         for keyindexi,keyindexj,keyindexk in tripleListSet:
-        # old method 0.27s
-        # tripleListSetFromIndexInEdge = list(itertools.combinations(indexInEdge,3))
-        # for keyindexi,keyindexj,keyindexk in tripleListSetFromIndexInEdge:
             ix = keypoints[keyindexi].pt[0]
             iy = -keypoints[keyindexi].pt[1]
             jx = keypoints[keyindexj].pt[0]
@@ -193,12 +189,7 @@ class TrainingHandler():
 
             self.triangleFeaturesSetList.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
 
-            isAnEdgeInTriangles[keyindexi,keyindexj] = True
-            isAnEdgeInTriangles[keyindexj,keyindexk] = True
-            isAnEdgeInTriangles[keyindexk,keyindexi] = True
-            isAnEdgeInTriangles[keyindexj,keyindexi] = True
-            isAnEdgeInTriangles[keyindexk,keyindexi] = True
-            isAnEdgeInTriangles[keyindexi,keyindexk] = True
+            key3indexandDegreesofTriangle.append([keyindexi,keyindexj,keyindexk,delta1,delta2])
             
             self.edgeIndexCodeDict[dictCode(edgeij_anglei,edgeij_anglej)] = True
             self.edgeIndexCodeDict[dictCode(edgeij_anglej,edgeij_anglei)] = True
@@ -207,7 +198,7 @@ class TrainingHandler():
             self.edgeIndexCodeDict[dictCode(edgejk_anglej,edgejk_anglek)] = True
             self.edgeIndexCodeDict[dictCode(edgejk_anglek,edgejk_anglej)] = True
 
-        return kpIndexOfInTriangle, isAnEdgeInTriangles
+        return kpIndexOfInTriangle,key3indexandDegreesofTriangle 
 
     def image_training(self, img1path, img2path):
         img1 = cv2.imread(img1path) # 1:queryImage is going to be trained
@@ -257,29 +248,67 @@ class TrainingHandler():
         # self.drawKeyPoints(img1,img2,goodkeypoints1,goodkeypoints2)
 
         edgeIndexArray,indexInEdge,indexOfEdgePairs = self.generate_EdgeIndexArray_IndexInEdge(goodkeypoints1,goodkeypoints2)
-        tStart = time.time()
-        kpIndexOfInTriangle,isAnEdgeInTriangles = self.create_triangles(edgeIndexArray,indexInEdge,indexOfEdgePairs,goodkeypoints1,goodkeydes1,img1path)
-        tEnd = time.time()
-        print "Creating triangles cost %f sec" % (tEnd - tStart)
+        kpIndexOfInTriangle,key3indexandDegreesofTriangle = self.create_triangles(edgeIndexArray,indexInEdge,indexOfEdgePairs,goodkeypoints1,goodkeydes1,img1path)
         indexOfIDstartPosition = len(self.trainedDescriptorsList)
         for keyindex in kpIndexOfInTriangle:
             self.trainedDescriptorsList.append(goodkeydes1[keyindex])
         keyInTriangleLabelIDDict = dict(zip(list(kpIndexOfInTriangle), range(indexOfIDstartPosition,indexOfIDstartPosition+len(kpIndexOfInTriangle))))
-        temp2keyList = list(itertools.combinations(list(kpIndexOfInTriangle),2))
         
-        for i,j in temp2keyList:
-            if isAnEdgeInTriangles[i,j]:
-                self.the2IndexesOfIDandEdge2AnglesList.append([keyInTriangleLabelIDDict[i],keyInTriangleLabelIDDict[j],edgeIndexArray[i,j],edgeIndexArray[j,i]])
-                
+        for x in range(len(key3indexandDegreesofTriangle)):
+            i = key3indexandDegreesofTriangle[x][0]
+            j = key3indexandDegreesofTriangle[x][1]
+            k = key3indexandDegreesofTriangle[x][2]
+            delta1 = key3indexandDegreesofTriangle[x][3]
+            delta2 = key3indexandDegreesofTriangle[x][4]
+            alpha = edgeIndexArray[i,j]
+            beta = edgeIndexArray[j,k]
+            gamma = edgeIndexArray[k,i]
+            edgeij_anglej = edgeIndexArray[j,i]
+            edgejk_anglek = edgeIndexArray[k,j]
+            edgeik_anglei = edgeIndexArray[i,k]
+            self.triangleVWwith6anglesFeatureList.append([keyInTriangleLabelIDDict[i],keyInTriangleLabelIDDict[j],keyInTriangleLabelIDDict[k],delta1,delta2,alpha,beta,gamma,edgeij_anglej,edgejk_anglek,edgeik_anglei])
+
+    def generate_EdgeandTriangle_LSH(self):
+        x=0
+        for i,j,k,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,edgeij_anglej,edgejk_anglek,edgeik_anglei in self.triangleVWwith6anglesFeatureList:
+            vi = self.visualWordLabelIDs[i]*1000
+            vj = self.visualWordLabelIDs[j]*1000
+            vk = self.visualWordLabelIDs[k]*1000
+            delta3 = 180.0-delta1-delta2
+            self.trianglesIndexLSH.index([vi,vj,vk,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek],extra_data=x)
+            self.trianglesIndexLSH.index([vi,vk,vj,delta1,delta3,edgeik_anglei,edgejk_anglek,edgeij_anglej],extra_data=x)
+            self.trianglesIndexLSH.index([vj,vi,vk,delta2,delta1,edgeij_anglej,edgeik_anglei,edgejk_anglek],extra_data=x)
+            self.trianglesIndexLSH.index([vj,vk,vi,delta2,delta3,edgejk_anglej,edgeik_anglek,edgeij_anglei],extra_data=x)
+            self.trianglesIndexLSH.index([vk,vi,vj,delta3,delta1,edgeik_anglek,edgeij_anglei,edgejk_anglej],extra_data=x)
+            self.trianglesIndexLSH.index([vk,vj,vi,delta3,delta2,edgejk_anglek,edgeij_anglej,edgeik_anglei],extra_data=x)
+            self.edgesIndexLSH.index([vi,vj,edgeij_anglei,edgeij_anglej])
+            self.edgesIndexLSH.index([vj,vi,edgeij_anglej,edgeij_anglei])
+            self.edgesIndexLSH.index([vj,vk,edgejk_anglej,edgejk_anglek])
+            self.edgesIndexLSH.index([vk,vj,edgejk_anglek,edgejk_anglej])
+            self.edgesIndexLSH.index([vi,vk,edgeik_anglei,edgeik_anglek])
+            self.edgesIndexLSH.index([vk,vi,edgeik_anglek,edgeik_anglei])
+
+            x=x+1
+
     def edgeIndexLSH(self):
         lsh = LSHash(32, 4)
-        for i in range(len(self.the2IndexesOfIDandEdge2AnglesList)):
-            a=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][0]]
-            b=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][1]]
-            c=self.the2IndexesOfIDandEdge2AnglesList[i][2]
-            d=self.the2IndexesOfIDandEdge2AnglesList[i][3]
-            lsh.index([a,b,c,d])
-            lsh.index([b,a,d,c])
+        # for i in range(len(self.the2IndexesOfIDandEdge2AnglesList)):
+        #     a=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][0]]
+        #     b=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][1]]
+        #     c=self.the2IndexesOfIDandEdge2AnglesList[i][2]
+        #     d=self.the2IndexesOfIDandEdge2AnglesList[i][3]
+        #     lsh.index([a,b,c,d])
+        #     lsh.index([b,a,d,c])
+        for i,j,k,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,edgeij_anglej,edgejk_anglek,edgeik_anglei in self.triangleVWwith6anglesFeatureList:
+            vi = self.visualWordLabelIDs[i]
+            vj = self.visualWordLabelIDs[j]
+            vk = self.visualWordLabelIDs[k]
+            lsh.index([vi,vj,edgeij_anglei,edgeij_anglej])
+            lsh.index([vj,vi,edgeij_anglej,edgeij_anglei])
+            lsh.index([vj,vk,edgejk_anglej,edgejk_anglek])
+            lsh.index([vk,vj,edgejk_anglek,edgejk_anglej])
+            lsh.index([vi,vk,edgeik_anglei,edgeik_anglek])
+            lsh.index([vk,vi,edgeik_anglek,edgeik_anglei])
         return lsh
 
     def training_imageSet(self,setOfimgPaths):
@@ -294,9 +323,13 @@ class TrainingHandler():
         desArray = np.asarray(self.trainedDescriptorsList)
         self.centroidsOfKmean2000 = kmeans(desArray, 2000)
         self.visualWordLabelIDs  = list(vq(desArray, self.centroidsOfKmean2000[0])[0])
+        self.generate_EdgeandTriangle_LSH()
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
+   tStart = time.time()
    trHandler.training_imageSet(['box.png','box_in_scene.png'])
+   tEnd = time.time()
+   print "cost %f sec" % (tEnd - tStart)
    # trHandler.edgeIndexLSH()
    print len(trHandler.triangleFeaturesSetList)
