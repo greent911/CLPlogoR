@@ -295,12 +295,12 @@ class TrainingHandler():
             vj = self.visualWordLabelIDs[j]*1000
             vk = self.visualWordLabelIDs[k]*1000
             delta3 = 180.0-delta1-delta2
-            self.trianglesIndexLSH.index([vi,vj,vk,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek],extra_data=x)
-            self.trianglesIndexLSH.index([vi,vk,vj,delta1,delta3,edgeik_anglei,edgejk_anglek,edgeij_anglej],extra_data=x)
-            self.trianglesIndexLSH.index([vj,vi,vk,delta2,delta1,edgeij_anglej,edgeik_anglei,edgejk_anglek],extra_data=x)
-            self.trianglesIndexLSH.index([vj,vk,vi,delta2,delta3,edgejk_anglej,edgeik_anglek,edgeij_anglei],extra_data=x)
-            self.trianglesIndexLSH.index([vk,vi,vj,delta3,delta1,edgeik_anglek,edgeij_anglei,edgejk_anglej],extra_data=x)
-            self.trianglesIndexLSH.index([vk,vj,vi,delta3,delta2,edgejk_anglek,edgeij_anglej,edgeik_anglei],extra_data=x)
+            self.trianglesIndexLSH.index([vi,vj,vk,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek],extra_data=str(x))
+            self.trianglesIndexLSH.index([vi,vk,vj,delta1,delta3,edgeik_anglei,edgejk_anglek,edgeij_anglej],extra_data=str(x))
+            self.trianglesIndexLSH.index([vj,vi,vk,delta2,delta1,edgeij_anglej,edgeik_anglei,edgejk_anglek],extra_data=str(x))
+            self.trianglesIndexLSH.index([vj,vk,vi,delta2,delta3,edgejk_anglej,edgeik_anglek,edgeij_anglei],extra_data=str(x))
+            self.trianglesIndexLSH.index([vk,vi,vj,delta3,delta1,edgeik_anglek,edgeij_anglei,edgejk_anglej],extra_data=str(x))
+            self.trianglesIndexLSH.index([vk,vj,vi,delta3,delta2,edgejk_anglek,edgeij_anglej,edgeik_anglei],extra_data=str(x))
             self.edgesIndexLSH.index([vi,vj,edgeij_anglei,edgeij_anglej])
             self.edgesIndexLSH.index([vj,vi,edgeij_anglej,edgeij_anglei])
             self.edgesIndexLSH.index([vj,vk,edgejk_anglej,edgejk_anglek])
