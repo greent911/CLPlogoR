@@ -119,7 +119,8 @@ class Recognizer():
             beta = math_formula.computeRelativeAngle(kp[j].angle,-vix,-viy)
 
             # tempIndexNum = math_formula.dictCode(alpha,beta) 
-            if True:#trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
+            # if trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
+            if trHandler.dVisualWordIndexCheck[keyIds[i]/1000,keyIds[j]/1000]:
                 temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
                 if temp:
                     if temp[0][1] < 1000 and keyIds[i]-temp[0][0][0] == 0 and keyIds[j]-temp[0][0][1] == 0 and abs(alpha-temp[0][0][2]) < 25 and abs(beta-temp[0][0][3]) < 25:
