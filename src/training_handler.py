@@ -20,9 +20,11 @@ class TrainingHandler():
         self.TRIANGLE_CONSTRAINT_ANGLE = 15.0
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_LOWERBOUND = 1.0/3
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND = 3.0
-        self.triangleFeaturesSetList = []
-        self.edgeIndexCodeDict = {i+1: False for i in xrange(180*180)}
 
+        # Only Use for showing triangle compared image
+        self.triangleFeaturesSetList = []
+
+        self.edgeIndexCodeDict = {i+1: False for i in xrange(180*180)}
         self.trainedDescriptorsList = []
         self.centroidsOfKmean2000 = tuple()
         self.visualWordLabelIDs = []
@@ -211,12 +213,30 @@ class TrainingHandler():
         kp1, des1 = sift.detectAndCompute(img1,None)
         kp2, des2 = sift.detectAndCompute(img2,None)
 
-        # Need only good matches
-        matches = self.flann.knnMatch(des1,des2,k=2)
+        # ts = time.time()
+        matches = self.flann.knnMatch(des1,des2,k=2)        
+        matches = sorted(matches, key = lambda x:x[0].distance)
         goodmatches = []
-        for i,(m,n) in enumerate(matches):
-            if m.distance < self.DISTCOMPAREFACTOR*n.distance:
-                goodmatches.append(m)
+        indexm = 0
+        i = 0
+        matchesLength = len(matches)
+        while i < 300 and indexm < matchesLength:
+            if matches[indexm][0].distance < matches[indexm][1].distance*self.DISTCOMPAREFACTOR:
+                goodmatches.append(matches[indexm][0])
+                i = i + 1
+            indexm = indexm + 1
+        # print i,indexm
+        # te = time.time()
+        # print "knnmatch %f sec" % (te - ts)
+
+        # Need only good matches
+        # matches = self.flann.knnMatch(des1,des2,k=2)
+        # goodmatches = []
+        # for i,(m,n) in enumerate(matches):
+        #     if m.distance < self.DISTCOMPAREFACTOR*n.distance:
+        #         goodmatches.append(m)
+        # te = time.time()
+        # print "knnmatch %f sec" % (te - ts)
 
                 # print i
         # print goodmatches
@@ -290,39 +310,24 @@ class TrainingHandler():
 
             x=x+1
 
-    def edgeIndexLSH(self):
-        lsh = LSHash(32, 4)
-        # for i in range(len(self.the2IndexesOfIDandEdge2AnglesList)):
-        #     a=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][0]]
-        #     b=self.visualWordLabelIDs[self.the2IndexesOfIDandEdge2AnglesList[i][1]]
-        #     c=self.the2IndexesOfIDandEdge2AnglesList[i][2]
-        #     d=self.the2IndexesOfIDandEdge2AnglesList[i][3]
-        #     lsh.index([a,b,c,d])
-        #     lsh.index([b,a,d,c])
-        for i,j,k,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,edgeij_anglej,edgejk_anglek,edgeik_anglei in self.triangleVWwith6anglesFeatureList:
-            vi = self.visualWordLabelIDs[i]
-            vj = self.visualWordLabelIDs[j]
-            vk = self.visualWordLabelIDs[k]
-            lsh.index([vi,vj,edgeij_anglei,edgeij_anglej])
-            lsh.index([vj,vi,edgeij_anglej,edgeij_anglei])
-            lsh.index([vj,vk,edgejk_anglej,edgejk_anglek])
-            lsh.index([vk,vj,edgejk_anglek,edgejk_anglej])
-            lsh.index([vi,vk,edgeik_anglei,edgeik_anglek])
-            lsh.index([vk,vi,edgeik_anglek,edgeik_anglei])
-        return lsh
-
     def training_imageSet(self,setOfimgPaths):
         imgCount = len(setOfimgPaths)
         # for test, should not use it
-        for i in range(imgCount-1):
-            for j in range(i+1,imgCount):
-        # for i in range(imgCount):
-        #     for j in range(imgCount):
+        # for i in range(imgCount-1):
+        #     for j in range(i+1,imgCount):
+        tStart = time.time()
+        for i in range(imgCount):
+            for j in range(imgCount):
                 if i != j:
                     self.image_training(setOfimgPaths[i],setOfimgPaths[j])
+        tEnd = time.time()
+        print "cost %f sec" % (tEnd - tStart)
+        tStart = time.time()
         desArray = np.asarray(self.trainedDescriptorsList)
         self.centroidsOfKmean2000 = kmeans(desArray, 2000)
         self.visualWordLabelIDs  = list(vq(desArray, self.centroidsOfKmean2000[0])[0])
+        tEnd = time.time()
+        print "cost %f sec" % (tEnd - tStart)
         self.generate_EdgeandTriangle_LSH()
 
 if __name__ == '__main__':
@@ -331,5 +336,4 @@ if __name__ == '__main__':
    trHandler.training_imageSet(['box.png','box_in_scene.png'])
    tEnd = time.time()
    print "cost %f sec" % (tEnd - tStart)
-   # trHandler.edgeIndexLSH()
    print len(trHandler.triangleFeaturesSetList)
