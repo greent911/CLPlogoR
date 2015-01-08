@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from math import atan, degrees, exp, acos, sqrt
 from math_formula import dictCode
-from scipy.cluster.vq import vq, kmeans 
+from scipy.cluster.vq import vq, kmeans
 from lshash import LSHash
 import time
 
@@ -31,7 +31,7 @@ class TrainingHandler():
         self.edgesIndexLSH = LSHash(32, 4)
         self.trianglesIndexLSH = LSHash(32, 8)
         self.triangleVWwith6anglesFeatureList = []
-        
+
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
         h2, w2 = img2.shape[:2]
@@ -56,26 +56,26 @@ class TrainingHandler():
         angle = 0.0
         rangle = 0.0
         if vx > 0 and vy >= 0:
-            angle = degrees(atan(vy/vx))        
+            angle = degrees(atan(vy/vx))
         elif vx == 0 and vy == 0:
             angle = 0.0
         elif vx == 0 and vy > 0:
             angle = 90.0
         elif vx < 0 and vy > 0:
-            angle = 90.0 + degrees(atan(-vx/vy))        
+            angle = 90.0 + degrees(atan(-vx/vy))
         elif vx < 0 and vy == 0:
-            angle = 180.0       
+            angle = 180.0
         elif vx < 0 and vy < 0:
-            angle = 180.0 + degrees(atan(vy/vx))        
+            angle = 180.0 + degrees(atan(vy/vx))
         elif vx == 0 and vy < 0:
             angle = 270.0
         elif vx > 0 and vy < 0:
-            angle = 270.0 + degrees(atan(vx/-vy)) 
+            angle = 270.0 + degrees(atan(vx/-vy))
         else:
             print 'bugs here'
-                
+
         if (360.0 - siftangle) > angle:
-            rangle = (360.0 - siftangle) - angle        
+            rangle = (360.0 - siftangle) - angle
         else:
             rangle = 360 - (angle - (360.0 - siftangle))
         return rangle
@@ -115,7 +115,7 @@ class TrainingHandler():
                 viyp = float(jyp - iyp)
                 alphap = self.compute_relative_angle(keypoints2[i].angle,vixp,viyp)
                 betap = self.compute_relative_angle(keypoints2[j].angle,-vixp,-viyp)
-       
+
                 dalpha = abs(alpha - alphap)
                 dbeta = abs(beta - betap)
                 simedge = exp(-dalpha*dalpha/128) * exp(-dbeta*dbeta/128)
@@ -125,7 +125,7 @@ class TrainingHandler():
                     kpIndexOfInEdge.add(i)
                     kpIndexOfInEdge.add(j)
                     indexOfEdgePairs.append([i,j])
-                    
+
         return kpIndexOfEdgeAngleArray,list(kpIndexOfInEdge),indexOfEdgePairs
 
     def create_triangles(self,indexOfEdgeAngle,indexInEdge,indexOfEdgePairs,keypoints,descriptors,imgpath):
@@ -184,7 +184,7 @@ class TrainingHandler():
             edgeij_anglej = indexOfEdgeAngle[keyindexj,keyindexi]
             edgejk_anglek = indexOfEdgeAngle[keyindexk,keyindexi]
             edgeik_anglei = indexOfEdgeAngle[keyindexi,keyindexk]
-            
+
             kpIndexOfInTriangle.add(keyindexi)
             kpIndexOfInTriangle.add(keyindexj)
             kpIndexOfInTriangle.add(keyindexk)
@@ -192,7 +192,7 @@ class TrainingHandler():
             self.triangleFeaturesSetList.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
 
             key3indexandDegreesofTriangle.append([keyindexi,keyindexj,keyindexk,delta1,delta2])
-            
+
             self.edgeIndexCodeDict[dictCode(edgeij_anglei,edgeij_anglej)] = True
             self.edgeIndexCodeDict[dictCode(edgeij_anglej,edgeij_anglei)] = True
             self.edgeIndexCodeDict[dictCode(edgeik_anglei,edgeik_anglek)] = True
@@ -200,7 +200,7 @@ class TrainingHandler():
             self.edgeIndexCodeDict[dictCode(edgejk_anglej,edgejk_anglek)] = True
             self.edgeIndexCodeDict[dictCode(edgejk_anglek,edgejk_anglej)] = True
 
-        return kpIndexOfInTriangle,key3indexandDegreesofTriangle 
+        return kpIndexOfInTriangle,key3indexandDegreesofTriangle
 
     def image_training(self, img1path, img2path):
         img1 = cv2.imread(img1path) # 1:queryImage is going to be trained
@@ -214,7 +214,7 @@ class TrainingHandler():
         kp2, des2 = sift.detectAndCompute(img2,None)
 
         # ts = time.time()
-        matches = self.flann.knnMatch(des1,des2,k=2)        
+        matches = self.flann.knnMatch(des1,des2,k=2)
         matches = sorted(matches, key = lambda x:x[0].distance)
         goodmatches = []
         indexm = 0
@@ -242,9 +242,9 @@ class TrainingHandler():
         # print goodmatches
         # print goodmatches[0].distance
         # print matches[233][0].distance
-        
+
         indices = range(len(goodmatches))
-        
+
         # indices.sort(key=lambda i: goodmatches[i].distance)
 
         # The matching SIFT keypoints of queryImage and trainImage are at the same indexes
@@ -273,7 +273,7 @@ class TrainingHandler():
         for keyindex in kpIndexOfInTriangle:
             self.trainedDescriptorsList.append(goodkeydes1[keyindex])
         keyInTriangleLabelIDDict = dict(zip(list(kpIndexOfInTriangle), range(indexOfIDstartPosition,indexOfIDstartPosition+len(kpIndexOfInTriangle))))
-        
+
         for x in range(len(key3indexandDegreesofTriangle)):
             i = key3indexandDegreesofTriangle[x][0]
             j = key3indexandDegreesofTriangle[x][1]
