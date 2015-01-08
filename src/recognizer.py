@@ -7,6 +7,7 @@ import numpy as np
 # from lshash import LSHash
 from scipy.cluster.vq import vq
 import time
+import random
 
 class Recognizer():
     def createAtriangle(self,tripePoint,kp,keyIds,imgpath):
@@ -79,33 +80,6 @@ class Recognizer():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def triangleCompare(self,triangle1,triangle2):
-        if 180.0 - triangle1[3] - triangle1[4] < 0.0 or 180.0 - triangle1[3] - triangle1[4] > 180.0:
-            print "wtf"
-        if 180.0 - triangle2[3] - triangle2[4] < 0.0 or 180.0 - triangle2[3] - triangle2[4] > 180.0:
-            print "wtf"
-        tr1angles = {0: triangle1[3],1: triangle1[4],2: 180.0 - triangle1[3] - triangle1[4]}
-        tr1anglesTuples = sorted(tr1angles.items(), key=lambda x: x[1])
-        tr2angles = {0: triangle2[3],1: triangle2[4],2: 180.0 - triangle2[3] - triangle2[4]}
-        tr2anglesTuples = sorted(tr2angles.items(), key=lambda x: x[1])
-        # print tr1anglesTuples,tr2anglesTuples
-        if abs(tr1anglesTuples[0][1] - tr2anglesTuples[0][1]) < 2 and abs(tr1anglesTuples[1][1] - tr2anglesTuples[1][1]) < 2 and abs(tr1anglesTuples[2][1] - tr2anglesTuples[2][1]) < 2:
-            if abs(triangle1[tr1anglesTuples[0][0]+5]-triangle2[tr2anglesTuples[0][0]+5]) < 2 and abs(triangle1[tr1anglesTuples[1][0]+5]-triangle2[tr2anglesTuples[1][0]+5]) < 2 and abs(triangle1[tr1anglesTuples[2][0]+5]-triangle2[tr2anglesTuples[2][0]+5]) < 2:
-                matches = math_formula.flann.knnMatch(np.asarray([triangle1[0],triangle1[1],triangle1[2]]),np.asarray([triangle2[0],triangle2[1],triangle2[2]]),k=1)
-                # print matches[0][0].queryIdx,matches[0][0].trainIdx
-                # print matches[1][0].queryIdx,matches[1][0].trainIdx
-                # print matches[2][0].queryIdx,matches[2][0].trainIdx
-                tempset ={0,1,2}
-                if not tempset.difference({matches[0][0].trainIdx,matches[1][0].trainIdx,matches[2][0].trainIdx}):
-                    self.drawTrianglePair(triangle1,triangle2)
-                    return True
-                else:
-                    return False
-            else:
-                return False
-        else:
-            return False
-
     def recognize(self,imgpath,trHandler):
         img = cv2.imread(imgpath)
 
@@ -123,23 +97,32 @@ class Recognizer():
         # print len(kppairs_num)
         matchSimpleEdgePairNum = []
         matchPointNum = set()
-        for i,j in kppairs_num:
+
+        # Time Start
+        tStart = time.time()        
+        maxcount = 0
+        random.shuffle(kppairs_num)
+        while kppairs_num and maxcount < 100000:
+            i,j = kppairs_num.pop()
+            maxcount = maxcount + 1
+        # for i,j in kppairs_num:
             ix = kp[i].pt[0]
             iy = -kp[i].pt[1]
             jx = kp[j].pt[0]
             jy = -kp[j].pt[1]
             vix = jx - ix
             viy = jy - iy
-            # if sqrt(abs(vix*vix+viy*viy)) < trHandler.TRIANGLE_CONSTRAINT_DIST:
-            #     continue
+            length = sqrt(abs(vix*vix+viy*viy))
+            if length < 3.0 or length > 30.0:
+                continue
             alpha = math_formula.computeRelativeAngle(kp[i].angle,vix,viy)
             beta = math_formula.computeRelativeAngle(kp[j].angle,-vix,-viy)
 
-            tempIndexNum = math_formula.dictCode(alpha,beta) 
-            if trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
+            # tempIndexNum = math_formula.dictCode(alpha,beta) 
+            if True:#trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
                 temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
                 if temp:
-                    if temp[0][1] < 1000 and keyIds[i]-temp[0][0][0] == 0 and keyIds[j]-temp[0][0][1] == 0:
+                    if temp[0][1] < 1000 and keyIds[i]-temp[0][0][0] == 0 and keyIds[j]-temp[0][0][1] == 0 and abs(alpha-temp[0][0][2]) < 25 and abs(beta-temp[0][0][3]) < 25:
                         # print keyIds[i],keyIds[j],temp[k][0][0],temp[k][0][1]
                         # print alpha,beta,temp[k][0][2],temp[k][0][3]
                         # print temp[0][1]
@@ -148,6 +131,9 @@ class Recognizer():
                         matchPointNum.add(j)
 
         print 'Edge Match Count:',len(matchSimpleEdgePairNum)
+        # Time End
+        tEnd = time.time()
+        print "cost %f sec" % (tEnd - tStart)
         # matchPointNum = {1,2,3}
         # matchSimpleEdgePairNum = [[1,2],[1,3],[2,3]]
 
@@ -178,28 +164,23 @@ class Recognizer():
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
             if queryResult:
                 if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
-                    # self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[queryResult[0][0][1]])
+                    self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[queryResult[0][0][1]])
                     matchCount = matchCount + 1
                     # print queryResult[0]
                     print queryResult[0][0][1]
 
-            # old
-            # for j in range(len(trHandler.triangleFeaturesSetList)):
-            #     if self.triangleCompare(queryImgTriangles[i],trHandler.triangleFeaturesSetList[j]):
-            #         matchCount = matchCount + 1
-                    # print i,j
         print 'Triangle Feature Match Count:',matchCount
 
 if __name__ == '__main__':
    trHandler = TrainingHandler()
    # trHandler.image_training('box.png','box_in_scene.png')
-   # trHandler.training_imageSet(['box.png','box_in_scene.png'])
-   trHandler.training_imageSet(['box.png','box_query.png'])
+   trHandler.training_imageSet(['box.png','box_in_scene.png'])
    print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
    recognizer = Recognizer()
+   # Time Start
    tStart = time.time()        
-   recognizer.recognize('box_in_scene.png',trHandler)
-   # recognizer.recognize('box_query.png',trHandler)
+   recognizer.recognize('box_query.png',trHandler)
+   # Time End
    tEnd = time.time()
    print "cost %f sec" % (tEnd - tStart)
 
