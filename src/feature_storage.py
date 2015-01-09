@@ -1,34 +1,31 @@
 import cPickle
+from training_handler import *
 
 class FeatureStorage:
-    def __init__(self, logo_tile, triangleFeaturesSetList=None,\
-                                  edgeIndexCodeDict=None,\
-                                  trainedDescriptorsList=None,\
-                                  centroidsOfKmean2000=None,\
-                                  visualWordLabelIDs=None,\
-                                  edgesIndexLSH=None,\
-                                  trianglesIndexLSH=None,\
-                                  triangleVWwith6anglesFeatureList=None):
+    def __init__(self, logo_tile):
+        self.destDirPath = '../model'
         self.logo_tile = logo_tile
-        self.triangleFeaturesSetList = triangleVWwith6anglesFeatureList
-        self.edgeIndexCodeDict = edgesIndexLSH
-        self.trainedDescriptorsList = trainedDescriptorsList
-        self.centroidsOfKmean2000 = centroidsOfKmean2000
-        self.visualWordLabelIDs = visualWordLabelIDs
-        self.edgesIndexLSH = edgesIndexLSH
-        self.trianglesIndexLSH = trianglesIndexLSH
-        self.triangleVWwith6anglesFeatureList = triangleVWwith6anglesFeatureList
 
-    def save(self):
-        data = (self.triangleFeaturesSetList,
-                self.edgeIndexCodeDict,
-                self.trainedDescriptorsList,
-                self.centroidsOfKmean2000,
-                self.visualWordLabelIDs,
-                self.edgesIndexLSH,
-                self.trianglesIndexLSH,
-                self.triangleVWwith6anglesFeatureList)
-        fh = open(self.logo_tile+'.pkl', 'wb')
+    def save(self, trHandler):
+
+        logo_tile = self.logo_tile
+
+        # store whole trHandler into ./model/logo_name.pkl
+        fh = open( self.destDirPath + '/' + logo_tile+'.pkl', 'wb')
+
+
+        data = (
+            #trHandler.triangleFeaturesSetList,
+                trHandler.edgeIndexCodeDict,
+                trHandler.edgeIndexCodeDict,
+                trHandler.trainedDescriptorsList ,
+                trHandler.centroidsOfKmean2000,
+                trHandler.visualWordLabelIDs,
+                trHandler.edgesIndexLSH,
+                trHandler.trianglesIndexLSH,
+                trHandler.triangleVWwith6anglesFeatureList,
+                trHandler.dVisualWordIndexCheck )
+
         cPickle.dump(data,fh)
 
         if fh is not None:
@@ -36,26 +33,37 @@ class FeatureStorage:
 
     def load(self, logo_tile = None):
         if logo_tile == None:
+            # raise error
             logo_tile = self.logo_tile
-        fh = None
 
-        fh = open(logo_tile+'.pkl', 'rb')
+        fh = open(self.destDirPath + '/' + logo_tile+'.pkl', 'rb')
         data = cPickle.load(fh)
-
-        (self.triangleFeaturesSetList,
-         self.edgeIndexCodeDict,
-         self.trainedDescriptorsList,
-         self.centroidsOfKmean2000,
-         self.visualWordLabelIDs,
-         self.edgesIndexLSH,
-         self.trianglesIndexLSH,
-         self.triangleVWwith6anglesFeatureLis) = data
         fh.close()
 
+        trHandler = TrainingHandler()
 
+        #(trHandler.triangleFeaturesSetList,
+        (
+            trHandler.edgeIndexCodeDict,
+            trHandler.edgeIndexCodeDict,
+            trHandler.trainedDescriptorsList ,
+            trHandler.centroidsOfKmean2000,
+            trHandler.visualWordLabelIDs,
+            trHandler.edgesIndexLSH,
+            trHandler.trianglesIndexLSH,
+            trHandler.triangleVWwith6anglesFeatureList,
+            trHandler.dVisualWordIndexCheck ) = data
+
+        return trHandler
 
 if __name__=='__main__':
+
+    trHandler = TrainingHandler()
+    trHandler.training_imageSet(['box.png', 'box_in_scene.png'])
+
     FS = FeatureStorage('adidas')
-    FS.save()
-    FS.load()
+    FS.save(trHandler)
+
+    new_trHandler = FS.load('adidas')
+    print new_trHandler
 
