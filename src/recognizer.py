@@ -104,7 +104,6 @@ class Recognizer():
         random.shuffle(kppairs_num)
         while kppairs_num and maxcount < 100000:
             i,j = kppairs_num.pop()
-            maxcount = maxcount + 1
         # for i,j in kppairs_num:
             ix = kp[i].pt[0]
             iy = -kp[i].pt[1]
@@ -115,17 +114,17 @@ class Recognizer():
             length = sqrt(abs(vix*vix+viy*viy))
             if length < 3.0 or length > 30.0:
                 continue
+            maxcount = maxcount + 1
             alpha = math_formula.computeRelativeAngle(kp[i].angle,vix,viy)
             beta = math_formula.computeRelativeAngle(kp[j].angle,-vix,-viy)
 
             # tempIndexNum = math_formula.dictCode(alpha,beta) 
-            if True:#trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
+            # if trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
+            if trHandler.dVisualWordIndexCheck[keyIds[i]/1000,keyIds[j]/1000]:
                 temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
                 if temp:
                     if temp[0][1] < 1000 and keyIds[i]-temp[0][0][0] == 0 and keyIds[j]-temp[0][0][1] == 0 and abs(alpha-temp[0][0][2]) < 25 and abs(beta-temp[0][0][3]) < 25:
-                        # print keyIds[i],keyIds[j],temp[k][0][0],temp[k][0][1]
-                        # print alpha,beta,temp[k][0][2],temp[k][0][3]
-                        # print temp[0][1]
+                        # print keyIds[i],keyIds[j],temp[0][0][0],temp[0][0][1]
                         matchSimpleEdgePairNum.append([i,j])
                         matchPointNum.add(i)
                         matchPointNum.add(j)
@@ -164,10 +163,9 @@ class Recognizer():
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
             if queryResult:
                 if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
-                    self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[queryResult[0][0][1]])
+                    self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[int(queryResult[0][0][1])])
                     matchCount = matchCount + 1
-                    # print queryResult[0]
-                    print queryResult[0][0][1]
+                    # print queryResult[0][0][1]
 
         print 'Triangle Feature Match Count:',matchCount
 

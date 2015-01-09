@@ -31,7 +31,8 @@ class TrainingHandler():
         self.edgesIndexLSH = LSHash(32, 4)
         self.trianglesIndexLSH = LSHash(32, 8)
         self.triangleVWwith6anglesFeatureList = []
-
+        self.dVisualWordIndexCheck = np.zeros((2000,2000),bool)
+        
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
         h2, w2 = img2.shape[:2]
@@ -291,16 +292,25 @@ class TrainingHandler():
     def generate_EdgeandTriangle_LSH(self):
         x=0
         for i,j,k,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,edgeij_anglej,edgejk_anglek,edgeik_anglei in self.triangleVWwith6anglesFeatureList:
-            vi = self.visualWordLabelIDs[i]*1000
-            vj = self.visualWordLabelIDs[j]*1000
-            vk = self.visualWordLabelIDs[k]*1000
+            vi = self.visualWordLabelIDs[i]
+            vj = self.visualWordLabelIDs[j]
+            vk = self.visualWordLabelIDs[k]
+            self.dVisualWordIndexCheck[vi,vj] = True
+            self.dVisualWordIndexCheck[vj,vi] = True
+            self.dVisualWordIndexCheck[vj,vk] = True
+            self.dVisualWordIndexCheck[vk,vj] = True
+            self.dVisualWordIndexCheck[vi,vk] = True
+            self.dVisualWordIndexCheck[vk,vi] = True
+            vi = vi*1000
+            vj = vj*1000
+            vk = vk*1000
             delta3 = 180.0-delta1-delta2
-            self.trianglesIndexLSH.index([vi,vj,vk,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek],extra_data=x)
-            self.trianglesIndexLSH.index([vi,vk,vj,delta1,delta3,edgeik_anglei,edgejk_anglek,edgeij_anglej],extra_data=x)
-            self.trianglesIndexLSH.index([vj,vi,vk,delta2,delta1,edgeij_anglej,edgeik_anglei,edgejk_anglek],extra_data=x)
-            self.trianglesIndexLSH.index([vj,vk,vi,delta2,delta3,edgejk_anglej,edgeik_anglek,edgeij_anglei],extra_data=x)
-            self.trianglesIndexLSH.index([vk,vi,vj,delta3,delta1,edgeik_anglek,edgeij_anglei,edgejk_anglej],extra_data=x)
-            self.trianglesIndexLSH.index([vk,vj,vi,delta3,delta2,edgejk_anglek,edgeij_anglej,edgeik_anglei],extra_data=x)
+            self.trianglesIndexLSH.index([vi,vj,vk,delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek],extra_data=str(x))
+            self.trianglesIndexLSH.index([vi,vk,vj,delta1,delta3,edgeik_anglei,edgejk_anglek,edgeij_anglej],extra_data=str(x))
+            self.trianglesIndexLSH.index([vj,vi,vk,delta2,delta1,edgeij_anglej,edgeik_anglei,edgejk_anglek],extra_data=str(x))
+            self.trianglesIndexLSH.index([vj,vk,vi,delta2,delta3,edgejk_anglej,edgeik_anglek,edgeij_anglei],extra_data=str(x))
+            self.trianglesIndexLSH.index([vk,vi,vj,delta3,delta1,edgeik_anglek,edgeij_anglei,edgejk_anglej],extra_data=str(x))
+            self.trianglesIndexLSH.index([vk,vj,vi,delta3,delta2,edgejk_anglek,edgeij_anglej,edgeik_anglei],extra_data=str(x))
             self.edgesIndexLSH.index([vi,vj,edgeij_anglei,edgeij_anglej])
             self.edgesIndexLSH.index([vj,vi,edgeij_anglej,edgeij_anglei])
             self.edgesIndexLSH.index([vj,vk,edgejk_anglej,edgejk_anglek])
