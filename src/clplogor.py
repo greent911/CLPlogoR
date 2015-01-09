@@ -3,9 +3,12 @@ from glob import glob
 from numpy import zeros, resize, sqrt, histogram, hstack, vstack, savetxt, zeros_like
 from cPickle import dump
 import argparse
+from training_handler import TrainingHandler
+from recognizer import Recognizer
 
 EXTENSIONS = [".jpg", ".bmp", ".png", ".pgm", ".tif", ".tiff"]
-DATASETPATH = '../dataset'
+# DATASETPATH = '../dataset'
+DATASETPATH = '/home/yuan/dataset'
 
 def get_categories(datasetpath):
     cat_paths = [files
@@ -37,6 +40,10 @@ if __name__ == '__main__':
     # load dataset categories
     cats = get_categories(DATASETPATH)
 
-    for cat in cats:
-        print 'category:%s' % cat
-        print get_imgfiles(DATASETPATH+'/'+cat)
+    # for cat in cats:
+    #     print 'category:%s' % cat
+    #     print get_imgfiles(DATASETPATH+'/'+cat)
+    trHandler = TrainingHandler()
+    trHandler.training_imageSet(get_imgfiles(DATASETPATH+'/adidas'))
+    recognizer = Recognizer()
+    recognizer.recognize('../../2345541572.jpg',trHandler)
