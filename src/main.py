@@ -2,6 +2,22 @@ import os
 from getImagePath import GetImagePath
 from training_handler import TrainingHandler
 
+def train(logo_classes):
+
+    # get training dataset and train model for each class
+    for logo_name in logo_classes[:1]:
+        if 'no-logo' in logo_name:
+            continue
+        else:
+            print 'Logo:', logo_name
+            trainingPaths = getImagePath.getImagePath(logo_name,1)
+            print trainingPaths
+
+            trHandler = TrainingHandler(logo_name)
+            trHandler.training_imageSet(trainingPaths)
+
+
+
 if __name__=='__main__':
 
     flickr_db_path = '../../FlickrLogos-v2'
@@ -13,12 +29,6 @@ if __name__=='__main__':
 
     getImagePath = GetImagePath(flickr_db_path)
 
-    # get training dataset and train model for each class
-    for logo_name in logo_classes:
-        print 'Logo:', logo_name
-        trainingPaths = getImagePath.getImagePath(logo_name,1)
-        print trainingPaths
+    train(logo_classes)
 
-        trHandler = TrainingHandler(logo_name)
-        trHandler.training_imageSet(trainingPaths)
 
