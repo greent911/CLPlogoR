@@ -11,6 +11,9 @@ import random
 from feature_storage import FeatureStorage
 
 class Recognizer():
+    def __init__(self):
+        self.img_traingle_counter = {}
+
     def createAtriangle(self,tripePoint,kp,keyIds,imgpath):
 
         keyindexi,keyindexj,keyindexk = list(tripePoint)
@@ -156,8 +159,13 @@ class Recognizer():
         queryImgTriangles = []
         while tripePointNum:
             queryImgTriangles.append(self.createAtriangle(tripePointNum.pop(),kp,keyIds,imgpath))
+
         # print queryImgTriangles
         print imgpath,'Possible Triangles Count:',len(queryImgTriangles)
+        self.img_traingle_counter[imgpath] = len(queryImgTriangles)
+        #self.showTraingle(queryImgTriangles, trHandler)
+
+    def showTraingle(self, queryImgTriangles, trHandler):
 
         matchCount = 0
         for i in range(len(queryImgTriangles)):
@@ -170,6 +178,10 @@ class Recognizer():
 
         print 'Triangle Feature Match Count:',matchCount
 
+    def showImgTriangleCounter(self):
+        for key in self.img_traingle_counter:
+            print key, self.img_traingle_counter[key]
+
 if __name__ == '__main__':
    trHandler = TrainingHandler('adidas')
    # trHandler.image_training('box.png','box_in_scene.png')
@@ -179,6 +191,8 @@ if __name__ == '__main__':
    # Time Start
    tStart = time.time()
    recognizer.recognize('box_query.png',trHandler)
+   recognizer.recognize('./22.png', trHandler)
+   recognizer.showImgTriangleCounter()
    # Time End
    tEnd = time.time()
    print "cost %f sec" % (tEnd - tStart)
