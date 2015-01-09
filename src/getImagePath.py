@@ -7,7 +7,7 @@ class GetImagePath(object):
         super(GetImagePath, self).__init__()
         self.path = path
         self.arrayOfSet = [{}, {}, {}]
-        
+
     def getImagePath(self, className, setNum):
         setNum = setNum - 1
         if len(self.arrayOfSet[setNum]) < 1:
@@ -24,7 +24,7 @@ class GetImagePath(object):
                 else:
                     self.arrayOfSet[setNum][lineSplit[0]] = [filePath]
             f.close()
-        
+
         if setNum >= 0 and setNum < 3:
             if className in self.arrayOfSet[setNum]:
                 return self.arrayOfSet[setNum][className]
@@ -35,3 +35,8 @@ class GetImagePath(object):
             raise Exception("Set not exist!")
             return []
 
+if __name__=='__main__':
+    path = '../FlickrLogos-v2'
+
+    gi = GetImagePath(path)
+    print gi.getImagePath('no-logo',2)
