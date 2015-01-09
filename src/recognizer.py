@@ -50,10 +50,10 @@ class Recognizer():
         t_beta = math_formula.computeRelativeAngle(kp[keyindexj].angle,vjkx,vjky)
         t_gamma = math_formula.computeRelativeAngle(kp[keyindexk].angle,-vikx,-viky)
         return [keyIds[keyindexi],keyIds[keyindexj],keyIds[keyindexk],delta1,delta2,t_alpha,t_beta,t_gamma,kp[keyindexi],kp[keyindexj],kp[keyindexk],imgpath]
-
-    def drawTrianglePair(self,triangle1,triangle2):
+    
+    def drawTrianglePair(self,triangle1,trTriangle):
         img1 = cv2.imread(triangle1[11])
-        img2 = cv2.imread(triangle2[11])
+        img2 = cv2.imread(trTriangle[3])
 
         h1, w1 = img1.shape[:2]
         h2, w2 = img2.shape[:2]
@@ -66,9 +66,9 @@ class Recognizer():
         pt_i = (int(triangle1[8].pt[0]+w2), int(triangle1[8].pt[1]+h2))
         pt_j = (int(triangle1[9].pt[0]+w2), int(triangle1[9].pt[1]+h2))
         pt_k = (int(triangle1[10].pt[0]+w2), int(triangle1[10].pt[1]+h2))
-        pt_ip = (int(triangle2[8].pt[0]), int(triangle2[8].pt[1]))
-        pt_jp = (int(triangle2[9].pt[0]), int(triangle2[9].pt[1]))
-        pt_kp = (int(triangle2[10].pt[0]), int(triangle2[10].pt[1]))
+        pt_ip = (int(trTriangle[0][0]), int(trTriangle[0][1]))
+        pt_jp = (int(trTriangle[1][0]), int(trTriangle[1][1]))
+        pt_kp = (int(trTriangle[2][0]), int(trTriangle[2][1]))
 
         cv2.line(newimg, pt_i, pt_j, (255, 0, 0))
         cv2.line(newimg, pt_j, pt_k, (255, 0, 0))
@@ -119,8 +119,6 @@ class Recognizer():
             alpha = math_formula.computeRelativeAngle(kp[i].angle,vix,viy)
             beta = math_formula.computeRelativeAngle(kp[j].angle,-vix,-viy)
 
-            # tempIndexNum = math_formula.dictCode(alpha,beta)
-            # if trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
             if trHandler.dVisualWordIndexCheck[keyIds[i]/1000,keyIds[j]/1000]:
                 temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
                 if temp:
@@ -164,7 +162,7 @@ class Recognizer():
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
             if queryResult:
                 if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
-                    self.drawTrianglePair(queryImgTriangles[i],trHandler.triangleFeaturesSetList[int(queryResult[0][0][1])])
+                    self.drawTrianglePair(queryImgTriangles[i],trHandler.trianglePositionList[int(queryResult[0][0][1])])
                     matchCount = matchCount + 1
                     # print queryResult[0][0][1]
 
@@ -174,7 +172,7 @@ if __name__ == '__main__':
    trHandler = TrainingHandler('adidas')
    # trHandler.image_training('box.png','box_in_scene.png')
    #trHandler.training_imageSet(['box.png','box_in_scene.png'])
-   print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
+   # print 'Length of Trained Triangle Set:',len(trHandler.trianglePositionList)
    recognizer = Recognizer()
    # Time Start
    tStart = time.time()

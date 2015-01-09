@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from math import atan, degrees, exp, acos, sqrt
-from math_formula import dictCode
 from scipy.cluster.vq import vq, kmeans
 from lshash import LSHash
 import time
@@ -28,9 +27,7 @@ class TrainingHandler():
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND = 3.0
 
         # Only Use for showing triangle compared image
-        self.triangleFeaturesSetList = []
-
-        self.edgeIndexCodeDict = {i+1: False for i in xrange(180*180)}
+        self.trianglePositionList = []
 
         if isfile('../model/' + logo_name + '.pkl'):
             FS = FeatureStorage(logo_name)
@@ -202,24 +199,15 @@ class TrainingHandler():
             edgeik_anglek = indexOfEdgeAngle[keyindexk,keyindexi]
             if edgeij_anglei == 0.0 or edgejk_anglej == 0.0 or edgeik_anglek == 0.0:
                 continue
-            edgeij_anglej = indexOfEdgeAngle[keyindexj,keyindexi]
-            edgejk_anglek = indexOfEdgeAngle[keyindexk,keyindexi]
-            edgeik_anglei = indexOfEdgeAngle[keyindexi,keyindexk]
 
             kpIndexOfInTriangle.add(keyindexi)
             kpIndexOfInTriangle.add(keyindexj)
             kpIndexOfInTriangle.add(keyindexk)
 
-            self.triangleFeaturesSetList.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
+            # self.trianglePositionList.append([descriptors[keyindexi],descriptors[keyindexj],descriptors[keyindexk],delta1,delta2,edgeij_anglei,edgejk_anglej,edgeik_anglek,keypoints[keyindexi],keypoints[keyindexj],keypoints[keyindexk],imgpath])
+            self.trianglePositionList.append([keypoints[keyindexi].pt,keypoints[keyindexj].pt,keypoints[keyindexk].pt,imgpath])
 
             key3indexandDegreesofTriangle.append([keyindexi,keyindexj,keyindexk,delta1,delta2])
-
-            self.edgeIndexCodeDict[dictCode(edgeij_anglei,edgeij_anglej)] = True
-            self.edgeIndexCodeDict[dictCode(edgeij_anglej,edgeij_anglei)] = True
-            self.edgeIndexCodeDict[dictCode(edgeik_anglei,edgeik_anglek)] = True
-            self.edgeIndexCodeDict[dictCode(edgeik_anglek,edgeik_anglei)] = True
-            self.edgeIndexCodeDict[dictCode(edgejk_anglej,edgejk_anglek)] = True
-            self.edgeIndexCodeDict[dictCode(edgejk_anglek,edgejk_anglej)] = True
 
         return kpIndexOfInTriangle,key3indexandDegreesofTriangle
 
@@ -381,4 +369,4 @@ if __name__ == '__main__':
    trHandler.training_imageSet(['box.png','box_in_scene.png'])
    tEnd = time.time()
    print "cost %f sec" % (tEnd - tStart)
-   print len(trHandler.triangleFeaturesSetList)
+   print len(trHandler.trianglePositionList)
