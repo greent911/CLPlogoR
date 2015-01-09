@@ -8,10 +8,11 @@ import numpy as np
 from scipy.cluster.vq import vq
 import time
 import random
+from feature_storage import FeatureStorage
 
 class Recognizer():
     def createAtriangle(self,tripePoint,kp,keyIds,imgpath):
-        
+
         keyindexi,keyindexj,keyindexk = list(tripePoint)
         # print tripePoint
         # print keyindexi,keyindexj,keyindexk
@@ -49,7 +50,7 @@ class Recognizer():
         t_beta = math_formula.computeRelativeAngle(kp[keyindexj].angle,vjkx,vjky)
         t_gamma = math_formula.computeRelativeAngle(kp[keyindexk].angle,-vikx,-viky)
         return [keyIds[keyindexi],keyIds[keyindexj],keyIds[keyindexk],delta1,delta2,t_alpha,t_beta,t_gamma,kp[keyindexi],kp[keyindexj],kp[keyindexk],imgpath]
-    
+
     def drawTrianglePair(self,triangle1,triangle2):
         img1 = cv2.imread(triangle1[11])
         img2 = cv2.imread(triangle2[11])
@@ -81,8 +82,8 @@ class Recognizer():
         cv2.destroyAllWindows()
 
     def recognize(self,imgpath,trHandler):
-        img = cv2.imread(imgpath)
 
+        img = cv2.imread(imgpath)
         # Initiate SIFT detector
         sift = cv2.SIFT()
 
@@ -99,7 +100,7 @@ class Recognizer():
         matchPointNum = set()
 
         # Time Start
-        tStart = time.time()        
+        tStart = time.time()
         maxcount = 0
         random.shuffle(kppairs_num)
         while kppairs_num and maxcount < 100000:
@@ -118,7 +119,7 @@ class Recognizer():
             alpha = math_formula.computeRelativeAngle(kp[i].angle,vix,viy)
             beta = math_formula.computeRelativeAngle(kp[j].angle,-vix,-viy)
 
-            # tempIndexNum = math_formula.dictCode(alpha,beta) 
+            # tempIndexNum = math_formula.dictCode(alpha,beta)
             # if trHandler.edgeIndexCodeDict[tempIndexNum]==True or (tempIndexNum < 180*180 and trHandler.edgeIndexCodeDict[tempIndexNum+1]==True ):
             if trHandler.dVisualWordIndexCheck[keyIds[i]/1000,keyIds[j]/1000]:
                 temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
@@ -140,7 +141,7 @@ class Recognizer():
         for i,j in matchSimpleEdgePairNum:
             tempDict[i].add(j)
             tempDict[j].add(i)
-        
+
         tripePointNum = []
         for i,j in matchSimpleEdgePairNum:
             tempset = tempDict[i].intersection(tempDict[j])
@@ -157,7 +158,7 @@ class Recognizer():
             queryImgTriangles.append(self.createAtriangle(tripePointNum.pop(),kp,keyIds,imgpath))
         # print queryImgTriangles
         print imgpath,'Possible Triangles Count:',len(queryImgTriangles)
-        
+
         matchCount = 0
         for i in range(len(queryImgTriangles)):
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
@@ -170,13 +171,13 @@ class Recognizer():
         print 'Triangle Feature Match Count:',matchCount
 
 if __name__ == '__main__':
-   trHandler = TrainingHandler()
+   trHandler = TrainingHandler('adidas')
    # trHandler.image_training('box.png','box_in_scene.png')
-   trHandler.training_imageSet(['box.png','box_in_scene.png'])
+   #trHandler.training_imageSet(['box.png','box_in_scene.png'])
    print 'Length of Trained Triangle Set:',len(trHandler.triangleFeaturesSetList)
    recognizer = Recognizer()
    # Time Start
-   tStart = time.time()        
+   tStart = time.time()
    recognizer.recognize('box_query.png',trHandler)
    # Time End
    tEnd = time.time()

@@ -6,8 +6,14 @@ from scipy.cluster.vq import vq, kmeans
 from lshash import LSHash
 import time
 
+from feature_storage import FeatureStorage
+from os.path import isfile
+
 class TrainingHandler():
-    def __init__(self):
+    def __init__(self, logo_name):
+
+        self.logo_name = logo_name
+
         # FLANN parameters
         FLANN_INDEX_KDTREE = 0
         index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
@@ -25,14 +31,28 @@ class TrainingHandler():
         self.triangleFeaturesSetList = []
 
         self.edgeIndexCodeDict = {i+1: False for i in xrange(180*180)}
-        self.trainedDescriptorsList = []
-        self.centroidsOfKmean2000 = tuple()
-        self.visualWordLabelIDs = []
-        self.edgesIndexLSH = LSHash(32, 4)
-        self.trianglesIndexLSH = LSHash(32, 8)
-        self.triangleVWwith6anglesFeatureList = []
-        self.dVisualWordIndexCheck = np.zeros((2000,2000),bool)
-        
+
+        if isfile('../model/' + logo_name + '.pkl'):
+            FS = FeatureStorage(logo_name)
+            data = FS.load()
+
+            (self.trainedDescriptorsList ,\
+            self.centroidsOfKmean2000,\
+            self.visualWordLabelIDs,\
+            self.edgesIndexLSH,\
+            self.trianglesIndexLSH,\
+            self.triangleVWwith6anglesFeatureList,\
+            self.dVisualWordIndexCheck) = data
+
+        else:
+            self.trainedDescriptorsList = []
+            self.centroidsOfKmean2000 = tuple()
+            self.visualWordLabelIDs = []
+            self.edgesIndexLSH = LSHash(32, 4)
+            self.trianglesIndexLSH = LSHash(32, 8)
+            self.triangleVWwith6anglesFeatureList = []
+            self.dVisualWordIndexCheck = np.zeros((2000,2000),bool)
+
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
         h2, w2 = img2.shape[:2]
@@ -340,8 +360,23 @@ class TrainingHandler():
         print "cost %f sec" % (tEnd - tStart)
         self.generate_EdgeandTriangle_LSH()
 
+
+        data = (
+            #trHandler.triangleFeaturesSetList,
+                self.trainedDescriptorsList ,
+                self.centroidsOfKmean2000,
+                self.visualWordLabelIDs,
+                self.edgesIndexLSH,
+                self.trianglesIndexLSH,
+                self.triangleVWwith6anglesFeatureList,
+                self.dVisualWordIndexCheck )
+
+
+        FS = FeatureStorage(self.logo_name)
+        FS.save(data)
+
 if __name__ == '__main__':
-   trHandler = TrainingHandler()
+   trHandler = TrainingHandler('adidas')
    tStart = time.time()
    trHandler.training_imageSet(['box.png','box_in_scene.png'])
    tEnd = time.time()
