@@ -1,11 +1,12 @@
 import os
 from getImagePath import GetImagePath
 from training_handler import TrainingHandler
+from recognizer import Recognizer
 
 def train(logo_classes):
 
     # get training dataset and train model for each class
-    for logo_name in logo_classes[:1]:
+    for logo_name in logo_classes:
         if 'no-logo' in logo_name:
             continue
         else:
@@ -16,7 +17,34 @@ def train(logo_classes):
             trHandler = TrainingHandler(logo_name)
             trHandler.training_imageSet(trainingPaths)
 
+def validate(logo_classes):
 
+
+    # in order to get the threshold of each class
+    # we need to check number of match triangle in same logo class images
+    # and no-logo images.
+
+    for logo_name in logo_classes[:1]:
+        print logo_name
+        recognizer = Recognizer()
+
+        if 'no-logo' in logo_name:
+            continue
+        else:
+            trHandler = TrainingHandler(logo_name)
+            imgPaths = getImagePath.getImagePath(logo_name,2)
+
+            for imgPath in imgPaths[:1]:
+                print imgPath
+                recognizer.recognize(imgPath, trHandler)
+
+            nologoImgPaths = getImagePath.getImagePath('no-logo',2)
+
+            for imgPath in nologoImgPaths[:1]:
+                print imgPath
+                recognizer.recognize(imgPath, trHandler)
+
+            recognizer.writeImgTriangleCounter(logo_name)
 
 if __name__=='__main__':
 
@@ -29,6 +57,6 @@ if __name__=='__main__':
 
     getImagePath = GetImagePath(flickr_db_path)
 
-    train(logo_classes)
-
+    #train(logo_classes)
+    validate(logo_classes)
 

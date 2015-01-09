@@ -169,7 +169,7 @@ class Recognizer():
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
             if queryResult:
                 if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
-                    self.drawTrianglePair(queryImgTriangles[i],trHandler.trianglePositionList[int(queryResult[0][0][1])])
+                    #self.drawTrianglePair(queryImgTriangles[i],trHandler.trianglePositionList[int(queryResult[0][0][1])])
                     matchCount = matchCount + 1
                     # print queryResult[0][0][1]
 
@@ -179,6 +179,14 @@ class Recognizer():
     def showImgTriangleCounter(self):
         for key in self.img_traingle_counter:
             print key, self.img_traingle_counter[key]
+
+    def writeImgTriangleCounter(self, logo_name):
+        f = open('../triangleCounter/'+logo_name,'w')
+        for key in self.img_traingle_counter:
+            print key, self.img_traingle_counter[key]
+            f.write(key+','+str(self.img_traingle_counter[key])+ '\n') # python will convert \n to os.linesep
+        f.close()
+
 
 if __name__ == '__main__':
    trHandler = TrainingHandler('adidas')
