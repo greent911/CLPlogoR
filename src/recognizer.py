@@ -53,7 +53,7 @@ class Recognizer():
         t_beta = math_formula.computeRelativeAngle(kp[keyindexj].angle,vjkx,vjky)
         t_gamma = math_formula.computeRelativeAngle(kp[keyindexk].angle,-vikx,-viky)
         return [keyIds[keyindexi],keyIds[keyindexj],keyIds[keyindexk],delta1,delta2,t_alpha,t_beta,t_gamma,kp[keyindexi],kp[keyindexj],kp[keyindexk],imgpath]
-    
+
     def drawTrianglePair(self,triangle1,trTriangle):
         img1 = cv2.imread(triangle1[11])
         img2 = cv2.imread(trTriangle[3])
@@ -161,7 +161,7 @@ class Recognizer():
         # print queryImgTriangles
         print imgpath,'Possible Triangles Count:',len(queryImgTriangles)
         self.img_traingle_counter[imgpath] = len(queryImgTriangles)
-        #self.showTraingle(queryImgTriangles, trHandler)
+        self.showTraingle(queryImgTriangles, trHandler)
 
     def showTraingle(self, queryImgTriangles, trHandler):
 

@@ -27,13 +27,13 @@ class TrainingHandler():
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_UPPERBOUND = 3.0
 
         # Only Use for showing triangle compared image
-        self.trianglePositionList = []
 
         if isfile('../model/' + logo_name + '.pkl'):
             FS = FeatureStorage(logo_name)
             data = FS.load()
 
-            (self.trainedDescriptorsList ,\
+            (self.trianglePositionList,
+            self.trainedDescriptorsList ,\
             self.centroidsOfKmean2000,\
             self.visualWordLabelIDs,\
             self.edgesIndexLSH,\
@@ -42,6 +42,7 @@ class TrainingHandler():
             self.dVisualWordIndexCheck) = data
 
         else:
+            self.trianglePositionList = []
             self.trainedDescriptorsList = []
             self.centroidsOfKmean2000 = tuple()
             self.visualWordLabelIDs = []
@@ -350,7 +351,7 @@ class TrainingHandler():
 
 
         data = (
-            #trHandler.triangleFeaturesSetList,
+                self.trianglePositionList,
                 self.trainedDescriptorsList ,
                 self.centroidsOfKmean2000,
                 self.visualWordLabelIDs,
