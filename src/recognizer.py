@@ -160,9 +160,9 @@ class Recognizer():
 
         # print queryImgTriangles
         print imgpath,'Possible Triangles Count:',len(queryImgTriangles)
-        self.showTraingle(queryImgTriangles, trHandler)
+        self.showTraingle(queryImgTriangles, trHandler, imgpath)
 
-    def showTraingle(self, queryImgTriangles, trHandler):
+    def showTraingle(self, queryImgTriangles, trHandler, imgpath):
 
         matchCount = 0
         for i in range(len(queryImgTriangles)):
@@ -174,7 +174,7 @@ class Recognizer():
                     # print queryResult[0][0][1]
 
         print 'Triangle Feature Match Count:',matchCount
-        self.img_traingle_counter[imgpath] = len(matchCount)
+        self.img_traingle_counter[imgpath] = matchCount
 
     def showImgTriangleCounter(self):
         for key in self.img_traingle_counter:

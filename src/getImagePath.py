@@ -18,7 +18,7 @@ class GetImagePath(object):
                 if len(line) == 0:
                     break
                 lineSplit = line.split(',')
-                filePath = self.path+'/class/jpg/'+lineSplit[0]+'/'+lineSplit[1]
+                filePath = self.path+'/classes/jpg/'+lineSplit[0]+'/'+lineSplit[1]
                 if lineSplit[0] in self.arrayOfSet[setNum]:
                     self.arrayOfSet[setNum][lineSplit[0]].append(filePath)
                 else:
