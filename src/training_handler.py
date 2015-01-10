@@ -223,7 +223,6 @@ class TrainingHandler():
         kp1, des1 = sift.detectAndCompute(img1,None)
         kp2, des2 = sift.detectAndCompute(img2,None)
 
-        # ts = time.time()
         matches = self.flann.knnMatch(des1,des2,k=2)
         matches = sorted(matches, key = lambda x:x[0].distance)
         goodmatches = []
@@ -236,8 +235,6 @@ class TrainingHandler():
                 i = i + 1
             indexm = indexm + 1
         # print i,indexm
-        # te = time.time()
-        # print "knnmatch %f sec" % (te - ts)
 
         # Need only good matches
         # matches = self.flann.knnMatch(des1,des2,k=2)
@@ -245,13 +242,6 @@ class TrainingHandler():
         # for i,(m,n) in enumerate(matches):
         #     if m.distance < self.DISTCOMPAREFACTOR*n.distance:
         #         goodmatches.append(m)
-        # te = time.time()
-        # print "knnmatch %f sec" % (te - ts)
-
-                # print i
-        # print goodmatches
-        # print goodmatches[0].distance
-        # print matches[233][0].distance
 
         indices = range(len(goodmatches))
 
@@ -339,16 +329,10 @@ class TrainingHandler():
             for j in range(imgCount):
                 if i != j:
                     self.image_training(setOfimgPaths[i],setOfimgPaths[j])
-        tEnd = time.time()
-        print "cost %f sec" % (tEnd - tStart)
-        tStart = time.time()
         desArray = np.asarray(self.trainedDescriptorsList)
         self.centroidsOfKmean2000 = kmeans(desArray, 2000)
         self.visualWordLabelIDs  = list(vq(desArray, self.centroidsOfKmean2000[0])[0])
-        tEnd = time.time()
-        print "cost %f sec" % (tEnd - tStart)
         self.generate_EdgeandTriangle_LSH()
-
 
         data = (
                 self.trianglePositionList,
@@ -363,6 +347,8 @@ class TrainingHandler():
 
         FS = FeatureStorage(self.logo_name)
         FS.save(data)
+        tEnd = time.time()
+        print "cost %f sec" % (tEnd - tStart)
 
 if __name__ == '__main__':
    trHandler = TrainingHandler('adidas')
