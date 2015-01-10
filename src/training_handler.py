@@ -20,7 +20,7 @@ class TrainingHandler():
 
         self.flann = cv2.FlannBasedMatcher(index_params,search_params)
         self.DISTCOMPAREFACTOR = 0.7
-        self.SIM_THRESHOLD = 0.95
+        self.SIM_THRESHOLD = 0.8
         self.TRIANGLE_CONSTRAINT_DIST = 5.0
         self.TRIANGLE_CONSTRAINT_ANGLE = 15.0
         self.TRIANGLE_CONSTRAINT_ECCENTRICITY_LOWERBOUND = 1.0/3
@@ -36,20 +36,20 @@ class TrainingHandler():
             self.trainedDescriptorsList ,\
             self.centroidsOfKmean2000,\
             self.visualWordLabelIDs,\
-            self.edgesIndexLSH,\
             self.trianglesIndexLSH,\
             self.triangleVWwith6anglesFeatureList,\
-            self.dVisualWordIndexCheck) = data
+            self.dVisualWordIndexCheck,\
+            self.edgeIndexHash) = data
 
         else:
             self.trianglePositionList = []
             self.trainedDescriptorsList = []
             self.centroidsOfKmean2000 = tuple()
             self.visualWordLabelIDs = []
-            self.edgesIndexLSH = LSHash(32, 4)
             self.trianglesIndexLSH = LSHash(32, 8)
             self.triangleVWwith6anglesFeatureList = []
             self.dVisualWordIndexCheck = np.zeros((2000,2000),bool)
+            self.edgeIndexHash = dict()
 
     def drawKeyPoints(self, img1, img2, keypoints1, keypoints2, num=-1):
         h1, w1 = img1.shape[:2]
@@ -310,6 +310,12 @@ class TrainingHandler():
             self.dVisualWordIndexCheck[vk,vj] = True
             self.dVisualWordIndexCheck[vi,vk] = True
             self.dVisualWordIndexCheck[vk,vi] = True
+            self.edgeIndexHash[(vi,vj,int(edgeij_anglei)/24,int(edgeij_anglej)/24)] = True
+            self.edgeIndexHash[(vj,vi,int(edgeij_anglej)/24,int(edgeij_anglei)/24)] = True
+            self.edgeIndexHash[(vj,vk,int(edgejk_anglej)/24,int(edgejk_anglek)/24)] = True
+            self.edgeIndexHash[(vk,vj,int(edgejk_anglek)/24,int(edgejk_anglej)/24)] = True
+            self.edgeIndexHash[(vi,vk,int(edgeik_anglei)/24,int(edgeik_anglek)/24)] = True
+            self.edgeIndexHash[(vk,vi,int(edgeik_anglek)/24,int(edgeik_anglei)/24)] = True
             vi = vi*1000
             vj = vj*1000
             vk = vk*1000
@@ -320,12 +326,6 @@ class TrainingHandler():
             self.trianglesIndexLSH.index([vj,vk,vi,delta2,delta3,edgejk_anglej,edgeik_anglek,edgeij_anglei],extra_data=str(x))
             self.trianglesIndexLSH.index([vk,vi,vj,delta3,delta1,edgeik_anglek,edgeij_anglei,edgejk_anglej],extra_data=str(x))
             self.trianglesIndexLSH.index([vk,vj,vi,delta3,delta2,edgejk_anglek,edgeij_anglej,edgeik_anglei],extra_data=str(x))
-            self.edgesIndexLSH.index([vi,vj,edgeij_anglei,edgeij_anglej])
-            self.edgesIndexLSH.index([vj,vi,edgeij_anglej,edgeij_anglei])
-            self.edgesIndexLSH.index([vj,vk,edgejk_anglej,edgejk_anglek])
-            self.edgesIndexLSH.index([vk,vj,edgejk_anglek,edgejk_anglej])
-            self.edgesIndexLSH.index([vi,vk,edgeik_anglei,edgeik_anglek])
-            self.edgesIndexLSH.index([vk,vi,edgeik_anglek,edgeik_anglei])
 
             x=x+1
 
@@ -355,10 +355,10 @@ class TrainingHandler():
                 self.trainedDescriptorsList ,
                 self.centroidsOfKmean2000,
                 self.visualWordLabelIDs,
-                self.edgesIndexLSH,
                 self.trianglesIndexLSH,
                 self.triangleVWwith6anglesFeatureList,
-                self.dVisualWordIndexCheck )
+                self.dVisualWordIndexCheck,
+                self.edgeIndexHash)
 
 
         FS = FeatureStorage(self.logo_name)
