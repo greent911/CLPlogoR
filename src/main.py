@@ -91,7 +91,7 @@ def test(logo_classes):
             print recognizer.triangleMatchCount()
             count = recognizer.triangleMatchCount()
             print '-------------'
-            f.write(imgPath + ' ' + logo_name + ' ' + model + ' ' + str(count) + '\n')
+            f.write(imgPath + ' ' + 'no-logo' + ' ' + model + ' ' + str(count) + '\n')
 
 #    for logo_name  in logo_classes:
 #        print logo_name
