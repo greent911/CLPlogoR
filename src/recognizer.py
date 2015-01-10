@@ -8,7 +8,6 @@ import numpy as np
 from scipy.cluster.vq import vq
 import time
 import random
-from feature_storage import FeatureStorage
 
 class Recognizer():
     def __init__(self):
@@ -98,7 +97,7 @@ class Recognizer():
         keyIds = [x*1000 for x in Ids]
 
         kppairs_num = list(itertools.combinations(range(len(kp)),2))
-        # print len(kppairs_num)
+        print len(kppairs_num)
         matchSimpleEdgePairNum = []
         matchPointNum = set()
 
@@ -116,17 +115,22 @@ class Recognizer():
             vix = jx - ix
             viy = jy - iy
             length = sqrt(abs(vix*vix+viy*viy))
-            if length < 3.0 or length > 30.0:
+            if length < 3.0 or length > 50.0:
                 continue
             maxcount = maxcount + 1
             alpha = math_formula.computeRelativeAngle(kp[i].angle,vix,viy)
             beta = math_formula.computeRelativeAngle(kp[j].angle,-vix,-viy)
 
-            if trHandler.dVisualWordIndexCheck[keyIds[i]/1000,keyIds[j]/1000]:
-                temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
-                if temp:
-                    if temp[0][1] < 1000 and keyIds[i]-temp[0][0][0] == 0 and keyIds[j]-temp[0][0][1] == 0 and abs(alpha-temp[0][0][2]) < 25 and abs(beta-temp[0][0][3]) < 25:
+            ki = keyIds[i]/1000
+            kj = keyIds[j]/1000
+            if trHandler.dVisualWordIndexCheck[ki,kj]:
+                # temp = trHandler.edgesIndexLSH.query([keyIds[i],keyIds[j],alpha,beta],1)
+                # if temp:
+                #     if temp[0][1] < 1000 and keyIds[i]-temp[0][0][0] == 0 and keyIds[j]-temp[0][0][1] == 0 and abs(alpha-temp[0][0][2]) < 25 and abs(beta-temp[0][0][3]) < 25:
                         # print keyIds[i],keyIds[j],temp[0][0][0],temp[0][0][1]
+                alphabin = int(alpha)/24
+                betabin = int(beta)/24
+                if (ki,kj,alphabin,betabin) in trHandler.edgeIndexHash or (ki,kj,alphabin+1,betabin) in trHandler.edgeIndexHash or (ki,kj,alphabin,betabin+1) in trHandler.edgeIndexHash or (ki,kj,alphabin-1,betabin) in trHandler.edgeIndexHash or (ki,kj,alphabin,betabin-1) in trHandler.edgeIndexHash or (ki,kj,alphabin+1,betabin+1) in trHandler.edgeIndexHash or (ki,kj,alphabin-1,betabin-1) in trHandler.edgeIndexHash:
                         matchSimpleEdgePairNum.append([i,j])
                         matchPointNum.add(i)
                         matchPointNum.add(j)
@@ -167,9 +171,12 @@ class Recognizer():
         matchCount = 0
         for i in range(len(queryImgTriangles)):
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
+            # print queryResult
+            # print queryImgTriangles[i]
             if queryResult:
-                if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
-                    self.drawTrianglePair(queryImgTriangles[i],trHandler.trianglePositionList[int(queryResult[0][0][1])])
+                # if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
+                if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and abs(queryImgTriangles[i][3] - queryResult[0][0][0][3]) < 10 and abs(queryImgTriangles[i][4] - queryResult[0][0][0][4]) < 10 and abs(queryImgTriangles[i][5] - queryResult[0][0][0][5]) < 24 and abs(queryImgTriangles[i][6] - queryResult[0][0][0][6]) < 24 and abs(queryImgTriangles[i][7] - queryResult[0][0][0][7]) < 24:
+                    # self.drawTrianglePair(queryImgTriangles[i],trHandler.trianglePositionList[int(queryResult[0][0][1])])
                     matchCount = matchCount + 1
                     # print queryResult[0][0][1]
 
