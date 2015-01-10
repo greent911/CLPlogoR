@@ -12,6 +12,7 @@ import random
 class Recognizer():
     def __init__(self):
         self.img_traingle_counter = {}
+        self.matchcount = -1
 
     def createAtriangle(self,tripePoint,kp,keyIds,imgpath):
 
@@ -181,6 +182,7 @@ class Recognizer():
                     # print queryResult[0][0][1]
 
         print 'Triangle Feature Match Count:',matchCount
+        self.matchcount = matchCount
         self.img_traingle_counter[imgpath] = matchCount
 
     def showImgTriangleCounter(self):
@@ -193,6 +195,9 @@ class Recognizer():
             print key, self.img_traingle_counter[key]
             f.write(key+','+str(self.img_traingle_counter[key])+ '\n') # python will convert \n to os.linesep
         f.close()
+    
+    def triangleMatchCount(self):
+        return self.matchcount
 
 
 if __name__ == '__main__':
