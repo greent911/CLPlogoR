@@ -69,7 +69,7 @@ def test(logo_classes):
         for logo_name in model_list_without_pkl:
             imgPaths = getImagePath.getImagePath(logo_name, 3)
 
-            for imgPath in imgPaths[:1]:
+            for imgPath in imgPaths:
                 recognizer.recognize(imgPath, trHandler)
 
                 f = open('../test_result', 'a')
@@ -82,7 +82,7 @@ def test(logo_classes):
                 f.close()
 
         imgPaths = getImagePath.getImagePath('no-logo', 3)
-        for imgPath in imgPaths[:1]:
+        for imgPath in imgPaths[:30]:
             recognizer.recognize(imgPath, trHandler)
 
             f = open('../test_result', 'a')
