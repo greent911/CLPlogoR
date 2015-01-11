@@ -1,7 +1,8 @@
+import csv
 classes_threshold_dict = {
-        'adidas': 0,
-        'aldi': 0,
-        'apple': 0,
+        'adidas': 2,
+        'aldi': 2,
+        'apple': 8,
         'becks': 0,
         'bmw': 0,
         'carlsberg': 0,
@@ -11,9 +12,9 @@ classes_threshold_dict = {
         'dhl': 0,
         'erdinger': 0,
         'esso': 0,
-        'fedex': 0,
+        'fedex': 2,
         'ferrari': 0,
-        'ford': 0,
+        'ford': 2,
         'fosters': 0,
         'google': 0,
         'guiness': 0,
@@ -23,15 +24,15 @@ classes_threshold_dict = {
         'no-logo': 0,
         'nvidia': 0,
         'paulaner': 0,
-        'pepsi': 0,
+        'pepsi': 2,
         'rittersport': 0,
         'shell': 0,
         'singha': 0,
-        'starbucks': 0,
+        'starbucks': 10,
         'stellaartois': 0,
         'texaco': 0,
         'tsingtao': 0,
-        'ups': 0
+        'ups': 2
         }
 class TestResultAnalyser(object):
     """docstring for TestResultAnalyser"""
@@ -60,10 +61,16 @@ class TestResultAnalyser(object):
 
             temps = imgpath.split('/')
             imgfilename = temps[len(temps)-1].rstrip('.jpg')
+            originClass = temps[len(temps)-2]
+            if originClass == detectClass:
+                score = 1
+            else:
+                score = 0
             f = open('../result', 'a')
-            f.write(imgfilename + ' ' + detectClass + '\n')
+            w = csv.writer(f)
+            w.writerow([imgfilename,detectClass,score])
             f.close()
-            print imgfilename,detectClass
+            print temps[len(temps)-2],imgfilename,detectClass
 
 if __name__=='__main__':
     filepath = '../test_result'
