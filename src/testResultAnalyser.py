@@ -1,3 +1,4 @@
+import csv
 classes_threshold_dict = {
         'adidas': 2,
         'aldi': 2,
@@ -60,8 +61,14 @@ class TestResultAnalyser(object):
 
             temps = imgpath.split('/')
             imgfilename = temps[len(temps)-1].rstrip('.jpg')
+            originClass = temps[len(temps)-2]
+            if originClass == detectClass:
+                score = 1
+            else:
+                score = 0
             f = open('../result', 'a')
-            f.write(imgfilename + ' ' + detectClass + '\n')
+            w = csv.writer(f)
+            w.writerow([imgfilename,detectClass,score])
             f.close()
             print temps[len(temps)-2],imgfilename,detectClass
 
