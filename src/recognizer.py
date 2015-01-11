@@ -84,6 +84,24 @@ class Recognizer():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+    def drawAllTriangles(self,trianglesList,imgpath):
+        img = cv2.imread(imgpath)
+        newimg = img
+        for triangle in trianglesList:
+            pt_i = (int(triangle[8].pt[0]), int(triangle[8].pt[1]))
+            pt_j = (int(triangle[9].pt[0]), int(triangle[9].pt[1]))
+            pt_k = (int(triangle[10].pt[0]), int(triangle[10].pt[1]))
+            color = np.random.randint(0,255,(3)).tolist()
+            cv2.line(newimg, pt_i, pt_j, color, thickness=2)
+            cv2.line(newimg, pt_j, pt_k, color, thickness=2)
+            cv2.line(newimg, pt_i, pt_k, color, thickness=2)
+        tempList = imgpath.split('/')
+        filename = tempList[len(tempList)-1]
+        cv2.imwrite('../images/'+filename,newimg)
+        # cv2.imshow('Matches',newimg)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
     def recognize(self,imgpath,trHandler):
 
         img = cv2.imread(imgpath)
@@ -170,6 +188,7 @@ class Recognizer():
     def showTraingle(self, queryImgTriangles, trHandler, imgpath):
 
         matchCount = 0
+        matchTriangleList = list()
         for i in range(len(queryImgTriangles)):
             queryResult = trHandler.trianglesIndexLSH.query([queryImgTriangles[i][0],queryImgTriangles[i][1],queryImgTriangles[i][2],queryImgTriangles[i][3],queryImgTriangles[i][4],queryImgTriangles[i][5],queryImgTriangles[i][6],queryImgTriangles[i][7]],1)
             # print queryResult
@@ -177,13 +196,15 @@ class Recognizer():
             if queryResult:
                 # if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and queryResult[0][1] < 1352:
                 if queryImgTriangles[i][0] == queryResult[0][0][0][0] and queryImgTriangles[i][1] == queryResult[0][0][0][1] and queryImgTriangles[i][2] == queryResult[0][0][0][2] and abs(queryImgTriangles[i][3] - queryResult[0][0][0][3]) < 10 and abs(queryImgTriangles[i][4] - queryResult[0][0][0][4]) < 10 and abs(queryImgTriangles[i][5] - queryResult[0][0][0][5]) < 24 and abs(queryImgTriangles[i][6] - queryResult[0][0][0][6]) < 24 and abs(queryImgTriangles[i][7] - queryResult[0][0][0][7]) < 24:
+                    matchTriangleList.append(queryImgTriangles[i])
                     # self.drawTrianglePair(queryImgTriangles[i],trHandler.trianglePositionList[int(queryResult[0][0][1])])
                     matchCount = matchCount + 1
                     # print queryResult[0][0][1]
-
         print 'Triangle Feature Match Count:',matchCount
         self.matchcount = matchCount
         self.img_traingle_counter[imgpath] = matchCount
+
+        self.drawAllTriangles(matchTriangleList,imgpath)
 
     def showImgTriangleCounter(self):
         for key in self.img_traingle_counter:
